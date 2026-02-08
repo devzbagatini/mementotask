@@ -6,6 +6,7 @@ import { TabNav } from './TabNav';
 import { FilterBar } from './FilterBar';
 import { KanbanBoard } from './kanban/KanbanBoard';
 import { TabelaView } from './tabela/TabelaView';
+import { ClientesView } from './clientes/ClientesView';
 import { ItemFormModal } from './forms/ItemFormModal';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 
@@ -31,6 +32,7 @@ function AppContent() {
               Timeline será implementado na próxima fase.
             </div>
           )}
+          {view === 'clientes' && <ClientesView />}
         </main>
       </div>
 

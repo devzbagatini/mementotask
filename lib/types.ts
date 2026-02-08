@@ -4,7 +4,7 @@ export type Status = 'a_fazer' | 'em_andamento' | 'pausado' | 'concluido' | 'can
 export type KanbanStatus = 'a_fazer' | 'em_andamento' | 'pausado' | 'concluido';
 export type Prioridade = 'alta' | 'media' | 'baixa';
 export type Tipo = 'projeto' | 'tarefa' | 'subtarefa';
-export type ViewType = 'kanban' | 'tabela' | 'timeline';
+export type ViewType = 'kanban' | 'tabela' | 'timeline' | 'clientes';
 
 // ===== Constantes =====
 
