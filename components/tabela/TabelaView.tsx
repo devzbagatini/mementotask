@@ -1,19 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
-  pointerWithin,
+  closestCenter,
   useSensor,
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
+  type DragOverEvent,
 } from '@dnd-kit/core';
 import { useMementotask } from '@/lib/context';
 import type { Item, Tipo } from '@/lib/types';
-import { TabelaRow } from './TabelaRow';
+import { TabelaRow, type DropZone } from './TabelaRow';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -99,12 +100,38 @@ function tipoForParent(parentItem: Item | undefined): Tipo {
   return 'subtarefa';
 }
 
+// Compute drop zone from pointer Y position relative to the row rect
+function computeZone(pointerY: number, rect: { top: number; height: number }, targetItem: Item): DropZone {
+  const relative = (pointerY - rect.top) / rect.height;
+  // Subtarefas can't have children — only above/below
+  if (targetItem.tipo === 'subtarefa') {
+    return relative < 0.5 ? 'above' : 'below';
+  }
+  if (relative < 0.25) return 'above';
+  if (relative > 0.75) return 'below';
+  return 'inside';
+}
+
 export function TabelaView() {
   const { filteredItems, items, moveItem } = useMementotask();
   const [sortKey, setSortKey] = useState<SortKey>('nome');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  // Track pointer Y and current drop target for visual indicators
+  const pointerYRef = useRef(0);
+  const [dropTarget, setDropTarget] = useState<{ itemId: string; zone: DropZone } | null>(null);
+
+  // Track pointer position during drag
+  useEffect(() => {
+    if (!activeItem) return;
+    const handler = (e: PointerEvent) => {
+      pointerYRef.current = e.clientY;
+    };
+    document.addEventListener('pointermove', handler);
+    return () => document.removeEventListener('pointermove', handler);
+  }, [activeItem]);
 
   // Load collapsed state from localStorage on mount
   useEffect(() => {
@@ -176,16 +203,33 @@ export function TabelaView() {
     if (item) setActiveItem(item);
   }, []);
 
+  // Update visual indicator during drag
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { over } = event;
+    if (!over) {
+      setDropTarget(null);
+      return;
+    }
+    const targetItem = over.data.current?.item as Item | undefined;
+    if (!targetItem) {
+      setDropTarget(null);
+      return;
+    }
+    const zone = computeZone(pointerYRef.current, over.rect, targetItem);
+    setDropTarget({ itemId: targetItem.id, zone });
+  }, []);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     setActiveItem(null);
+    setDropTarget(null);
+
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over) return;
 
     const draggedItem = active.data.current?.item as Item | undefined;
     const targetItem = over.data.current?.item as Item | undefined;
-    const dropZone = over.data.current?.zone as 'above' | 'inside' | 'below' | undefined;
 
-    if (!draggedItem || !targetItem) return;
+    if (!draggedItem || !targetItem || draggedItem.id === targetItem.id) return;
 
     // Prevent dropping on own descendant
     let parent: Item | undefined = targetItem;
@@ -194,11 +238,10 @@ export function TabelaView() {
       parent = parent.parentId ? items.find((i) => i.id === parent!.parentId) : undefined;
     }
 
-    // Determine effective zone — subtarefas can't have children, fallback to 'below'
-    const effectiveZone =
-      dropZone === 'inside' && targetItem.tipo === 'subtarefa' ? 'below' : dropZone;
+    // Compute zone from pointer position
+    const zone = computeZone(pointerYRef.current, over.rect, targetItem);
 
-    if (effectiveZone === 'inside') {
+    if (zone === 'inside') {
       const newTipo = tipoForParent(targetItem);
       const siblingCount = items.filter((i) => i.parentId === targetItem.id).length;
       moveItem(draggedItem.id, targetItem.id, newTipo, siblingCount);
@@ -210,7 +253,7 @@ export function TabelaView() {
         .filter((i) => i.parentId === newParentId && i.id !== draggedItem.id)
         .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
       const targetSiblingIdx = siblings.findIndex((s) => s.id === targetItem.id);
-      const insertIdx = effectiveZone === 'below' ? targetSiblingIdx + 1 : targetSiblingIdx;
+      const insertIdx = zone === 'below' ? targetSiblingIdx + 1 : targetSiblingIdx;
       moveItem(draggedItem.id, newParentId, newTipo, Math.max(0, insertIdx));
     }
   }, [items, moveItem]);
@@ -218,10 +261,11 @@ export function TabelaView() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={pointerWithin}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveItem(null)}
+      onDragCancel={() => { setActiveItem(null); setDropTarget(null); }}
     >
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
@@ -261,6 +305,7 @@ export function TabelaView() {
                 hasChildren={hasChildren}
                 isCollapsed={collapsed.has(item.id)}
                 onToggleCollapse={toggleCollapse}
+                dropIndicator={dropTarget?.itemId === item.id ? dropTarget.zone : null}
               />
             ))}
             {sortedItems.length === 0 && (

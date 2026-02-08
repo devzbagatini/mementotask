@@ -16,15 +16,18 @@ const STATUS_COLORS: Record<Status, string> = {
   cancelado: 'bg-status-cancelado/15 text-status-cancelado',
 };
 
+export type DropZone = 'above' | 'inside' | 'below';
+
 interface TabelaRowProps {
   item: Item;
   depth: number;
   hasChildren: boolean;
   isCollapsed: boolean;
   onToggleCollapse: (id: string) => void;
+  dropIndicator?: DropZone | null;
 }
 
-export function TabelaRow({ item, depth, hasChildren, isCollapsed, onToggleCollapse }: TabelaRowProps) {
+export function TabelaRow({ item, depth, hasChildren, isCollapsed, onToggleCollapse, dropIndicator }: TabelaRowProps) {
   const { openEditModal, openCreateModal, confirmDelete, editItem } = useMementotask();
 
   const childTipo = item.tipo === 'projeto' ? 'tarefa' : item.tipo === 'tarefa' ? 'subtarefa' : null;
@@ -40,50 +43,29 @@ export function TabelaRow({ item, depth, hasChildren, isCollapsed, onToggleColla
     data: { item },
   });
 
-  // Drop zones: above, inside, below
-  const { setNodeRef: setAboveRef, isOver: isOverAbove } = useDroppable({
-    id: `above-${item.id}`,
-    data: { item, zone: 'above' },
-  });
-  const { setNodeRef: setInsideRef, isOver: isOverInside } = useDroppable({
-    id: `inside-${item.id}`,
-    data: { item, zone: 'inside' },
-  });
-  const { setNodeRef: setBelowRef, isOver: isOverBelow } = useDroppable({
-    id: `below-${item.id}`,
-    data: { item, zone: 'below' },
+  // Single droppable for the whole row
+  const { setNodeRef: setDropRef } = useDroppable({
+    id: `drop-${item.id}`,
+    data: { item },
   });
 
   return (
     <tr
+      ref={setDropRef}
       className={cn(
         'group/row bg-surface-1 transition-colors hover:bg-surface-2 cursor-pointer relative',
         isDragging && 'opacity-30',
-        isOverInside && item.tipo !== 'subtarefa' && 'ring-2 ring-inset ring-accent-projeto/50',
+        dropIndicator === 'inside' && 'ring-2 ring-inset ring-accent-projeto/50',
       )}
       onClick={() => openEditModal(item)}
     >
       {/* Nome (with grip, hover +, checkbox, indentation) */}
       <td className="px-4 py-3 relative">
-        {/* Drop zones — 25% acima / 50% dentro / 25% abaixo, pointer-events-none para não bloquear cliques */}
-        <div
-          ref={setAboveRef}
-          className="absolute top-0 left-0 right-0 h-1/4 z-10 pointer-events-none"
-        />
-        {isOverAbove && (
+        {/* Visual drop indicators */}
+        {dropIndicator === 'above' && (
           <div className="absolute top-0 left-4 right-4 h-[2px] bg-accent-projeto rounded-full z-20 pointer-events-none" />
         )}
-
-        <div
-          ref={setInsideRef}
-          className="absolute top-1/4 left-0 right-0 bottom-1/4 z-10 pointer-events-none"
-        />
-
-        <div
-          ref={setBelowRef}
-          className="absolute bottom-0 left-0 right-0 h-1/4 z-10 pointer-events-none"
-        />
-        {isOverBelow && (
+        {dropIndicator === 'below' && (
           <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-accent-projeto rounded-full z-20 pointer-events-none" />
         )}
 
