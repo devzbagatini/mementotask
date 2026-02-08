@@ -1,8 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { useMementotask } from '@/lib/context';
-import type { Item } from '@/lib/types';
+import type { Item, Tipo } from '@/lib/types';
 import { TabelaRow } from './TabelaRow';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,12 +29,28 @@ const COLUMNS: { key: SortKey; label: string; className?: string }[] = [
 ];
 
 const ACOES_COLUMN = { label: 'Ações' };
+const COLLAPSED_KEY = 'mementotask_collapsed';
+
+function loadCollapsed(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(COLLAPSED_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCollapsed(collapsed: Set<string>) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed]));
+}
 
 function buildHierarchicalList(
   items: Item[],
-): { item: Item; depth: number }[] {
-  const result: { item: Item; depth: number }[] = [];
-  const itemMap = new Map(items.map((i) => [i.id, i]));
+  collapsed: Set<string>,
+): { item: Item; depth: number; hasChildren: boolean }[] {
+  const result: { item: Item; depth: number; hasChildren: boolean }[] = [];
   const childrenMap = new Map<string | null, Item[]>();
 
   for (const item of items) {
@@ -34,11 +59,20 @@ function buildHierarchicalList(
     childrenMap.set(item.parentId, list);
   }
 
+  // Sort children by ordem
+  for (const [, children] of childrenMap) {
+    children.sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+  }
+
   function walk(parentId: string | null, depth: number) {
     const children = childrenMap.get(parentId) ?? [];
     for (const child of children) {
-      result.push({ item: child, depth });
-      walk(child.id, depth + 1);
+      const hasChildren = (childrenMap.get(child.id)?.length ?? 0) > 0;
+      result.push({ item: child, depth, hasChildren });
+      // Skip children if this item is collapsed
+      if (!collapsed.has(child.id)) {
+        walk(child.id, depth + 1);
+      }
     }
   }
 
@@ -48,19 +82,52 @@ function buildHierarchicalList(
   const addedIds = new Set(result.map((r) => r.item.id));
   for (const item of items) {
     if (!addedIds.has(item.id)) {
-      // Determine depth based on tipo
       const depth = item.tipo === 'projeto' ? 0 : item.tipo === 'tarefa' ? 1 : 2;
-      result.push({ item, depth });
+      const hasChildren = (childrenMap.get(item.id)?.length ?? 0) > 0;
+      result.push({ item, depth, hasChildren });
     }
   }
 
   return result;
 }
 
+// Determine tipo based on new parent
+function tipoForParent(parentItem: Item | undefined): Tipo {
+  if (!parentItem) return 'projeto';
+  if (parentItem.tipo === 'projeto') return 'tarefa';
+  return 'subtarefa';
+}
+
 export function TabelaView() {
-  const { filteredItems } = useMementotask();
+  const { filteredItems, items, moveItem } = useMementotask();
   const [sortKey, setSortKey] = useState<SortKey>('nome');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [activeItem, setActiveItem] = useState<Item | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  // Load collapsed state from localStorage on mount
+  useEffect(() => {
+    setCollapsed(loadCollapsed());
+  }, []);
+
+  const toggleCollapse = useCallback((id: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      saveCollapsed(next);
+      return next;
+    });
+  }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+  );
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -100,52 +167,115 @@ export function TabelaView() {
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
-    return buildHierarchicalList(sorted);
-  }, [filteredItems, sortKey, sortDir]);
+    return buildHierarchicalList(sorted, collapsed);
+  }, [filteredItems, sortKey, sortDir, collapsed]);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const item = event.active.data.current?.item as Item | undefined;
+    if (item) setActiveItem(item);
+  }, []);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveItem(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const draggedItem = active.data.current?.item as Item | undefined;
+    const targetItem = over.data.current?.item as Item | undefined;
+    const dropZone = over.data.current?.zone as 'above' | 'inside' | 'below' | undefined;
+
+    if (!draggedItem || !targetItem) return;
+
+    // Prevent dropping on own descendant
+    let parent: Item | undefined = targetItem;
+    while (parent) {
+      if (parent.id === draggedItem.id) return;
+      parent = parent.parentId ? items.find((i) => i.id === parent!.parentId) : undefined;
+    }
+
+    if (dropZone === 'inside') {
+      // Nest as child — can't nest inside subtarefa
+      if (targetItem.tipo === 'subtarefa') return;
+      const newTipo = tipoForParent(targetItem);
+      const siblingCount = items.filter((i) => i.parentId === targetItem.id).length;
+      moveItem(draggedItem.id, targetItem.id, newTipo, siblingCount);
+    } else {
+      // Move as sibling (above or below the target)
+      const newParentId = targetItem.parentId;
+      const newTipo = tipoForParent(newParentId ? items.find((i) => i.id === newParentId) : undefined);
+      const siblings = items
+        .filter((i) => i.parentId === newParentId && i.id !== draggedItem.id)
+        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+      const targetSiblingIdx = siblings.findIndex((s) => s.id === targetItem.id);
+      const insertIdx = dropZone === 'below' ? targetSiblingIdx + 1 : targetSiblingIdx;
+      moveItem(draggedItem.id, newParentId, newTipo, Math.max(0, insertIdx));
+    }
+  }, [items, moveItem]);
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-surface-2">
-            {COLUMNS.map(({ key, label, className }) => (
-              <th
-                key={key}
-                className={cn(
-                  'px-4 py-3 text-left font-medium text-text-secondary cursor-pointer select-none hover:text-text-primary',
-                  className,
-                )}
-                onClick={() => handleSort(key)}
-              >
-                <div className="flex items-center gap-1">
-                  {label}
-                  {sortKey === key &&
-                    (sortDir === 'asc' ? (
-                      <ChevronUp className="h-3 w-3" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3" />
-                    ))}
-                </div>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveItem(null)}
+    >
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-surface-2">
+              {COLUMNS.map(({ key, label, className }) => (
+                <th
+                  key={key}
+                  className={cn(
+                    'px-4 py-3 text-left font-medium text-text-secondary cursor-pointer select-none hover:text-text-primary',
+                    className,
+                  )}
+                  onClick={() => handleSort(key)}
+                >
+                  <div className="flex items-center gap-1">
+                    {label}
+                    {sortKey === key &&
+                      (sortDir === 'asc' ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      ))}
+                  </div>
+                </th>
+              ))}
+              <th className="px-4 py-3 text-left font-medium text-text-secondary w-20">
+                {ACOES_COLUMN.label}
               </th>
-            ))}
-            <th className="px-4 py-3 text-left font-medium text-text-secondary w-20">
-              {ACOES_COLUMN.label}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {sortedItems.map(({ item, depth }) => (
-            <TabelaRow key={item.id} item={item} depth={depth} />
-          ))}
-          {sortedItems.length === 0 && (
-            <tr>
-              <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
-                Nenhum item encontrado.
-              </td>
             </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {sortedItems.map(({ item, depth, hasChildren }) => (
+              <TabelaRow
+                key={item.id}
+                item={item}
+                depth={depth}
+                hasChildren={hasChildren}
+                isCollapsed={collapsed.has(item.id)}
+                onToggleCollapse={toggleCollapse}
+              />
+            ))}
+            {sortedItems.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
+                  Nenhum item encontrado.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <DragOverlay>
+        {activeItem ? (
+          <div className="rounded-lg border border-accent-projeto bg-surface-1 px-4 py-2 shadow-lg opacity-90 text-sm font-medium text-text-primary">
+            {activeItem.nome}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

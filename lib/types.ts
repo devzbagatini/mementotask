@@ -62,6 +62,9 @@ export interface Item {
   tecnologias?: string[];
   notas?: string;
 
+  // Ordenação
+  ordem: number;
+
   // Metadados
   criadoEm: string;
   atualizadoEm: string;
@@ -73,6 +76,7 @@ export interface ItemCreate {
   status?: Status;
   prioridade?: Prioridade;
   parentId?: string | null;
+  ordem?: number;
   cliente?: string;
   valor?: number;
   valorRecebido?: number;

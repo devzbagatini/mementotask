@@ -35,6 +35,7 @@ interface MementotaskContextValue {
   openCreateModal: (tipo: Tipo, parentId?: string | null, status?: string) => void;
   openEditModal: (item: Item) => void;
   closeModal: () => void;
+  moveItem: (itemId: string, newParentId: string | null, newTipo: Tipo, targetIndex: number) => void;
   confirmDelete: (id: string, nome: string) => void;
   cancelDelete: () => void;
   executeDelete: () => void;
@@ -130,6 +131,34 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
   const closeModal = useCallback(() => {
     dispatch({ type: 'CLOSE_MODAL' });
   }, []);
+
+  // Move item (reorder / reparent)
+  const moveItem = useCallback(
+    (itemId: string, newParentId: string | null, newTipo: Tipo, targetIndex: number) => {
+      let newItems = [...state.items];
+      const itemIdx = newItems.findIndex((i) => i.id === itemId);
+      if (itemIdx === -1) return;
+
+      // Update item's parentId, tipo, and ordem
+      const now = new Date().toISOString();
+      newItems[itemIdx] = { ...newItems[itemIdx], parentId: newParentId, tipo: newTipo, atualizadoEm: now };
+
+      // Re-number siblings in the target parent
+      const siblings = newItems
+        .filter((i) => i.parentId === newParentId && i.id !== itemId)
+        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+
+      siblings.splice(targetIndex, 0, newItems[itemIdx]);
+      siblings.forEach((s, i) => {
+        const idx = newItems.findIndex((n) => n.id === s.id);
+        if (idx !== -1) newItems[idx] = { ...newItems[idx], ordem: i + 1 };
+      });
+
+      saveItems(newItems);
+      dispatch({ type: 'SET_ITEMS', payload: newItems });
+    },
+    [state.items],
+  );
 
   // Confirm dialog actions
   const confirmDelete = useCallback((id: string, nome: string) => {
@@ -229,6 +258,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
       openCreateModal,
       openEditModal,
       closeModal,
+      moveItem,
       confirmDelete,
       cancelDelete,
       executeDelete,
@@ -253,6 +283,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
       openCreateModal,
       openEditModal,
       closeModal,
+      moveItem,
       confirmDelete,
       cancelDelete,
       executeDelete,

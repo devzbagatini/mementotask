@@ -12,7 +12,21 @@ export function loadItems(): Item[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as Item[];
+    const items = JSON.parse(raw) as Item[];
+    // Migrate: add ordem field if missing
+    let needsSave = false;
+    const counters = new Map<string | null, number>();
+    for (const item of items) {
+      if (item.ordem == null) {
+        const key = item.parentId;
+        const next = (counters.get(key) ?? 0) + 1;
+        counters.set(key, next);
+        item.ordem = next;
+        needsSave = true;
+      }
+    }
+    if (needsSave) saveItems(items);
+    return items;
   } catch {
     return [];
   }
@@ -25,13 +39,18 @@ export function saveItems(items: Item[]): void {
 
 export function createItem(items: Item[], data: ItemCreate): Item[] {
   const now = new Date().toISOString();
+  const parentId = data.parentId ?? null;
+  // Auto-assign ordem: max among siblings + 1
+  const siblings = items.filter((i) => i.parentId === parentId);
+  const maxOrdem = siblings.reduce((max, i) => Math.max(max, i.ordem ?? 0), 0);
   const newItem: Item = {
     id: generateId(),
     nome: data.nome,
     tipo: data.tipo,
     status: data.status ?? 'a_fazer',
     prioridade: data.prioridade ?? 'media',
-    parentId: data.parentId ?? null,
+    parentId,
+    ordem: data.ordem ?? maxOrdem + 1,
     cliente: data.cliente,
     valor: data.valor,
     valorRecebido: data.valorRecebido,
