@@ -1,6 +1,7 @@
 'use client';
 
 import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { Item, Status } from '@/lib/types';
 import { STATUSES, STATUS_LABELS } from '@/lib/types';
 import { useMementotask } from '@/lib/context';
@@ -38,18 +39,27 @@ export function TabelaRow({ item, depth, hasChildren, isCollapsed, onToggleColla
     listeners,
     setNodeRef,
     setActivatorNodeRef,
+    transform,
+    transition,
     isDragging,
   } = useSortable({
     id: item.id,
     data: { item },
   });
 
+  // Apply CSS transforms so SortableContext can properly track positions
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+  };
+
   return (
     <tr
       ref={setNodeRef}
+      style={style}
       className={cn(
         'group/row bg-surface-1 transition-colors hover:bg-surface-2 cursor-pointer',
-        isDragging && 'opacity-30',
+        isDragging && 'opacity-30 z-10',
         dropIndicator === 'inside' && 'ring-2 ring-inset ring-accent-projeto/50',
       )}
       onClick={() => openEditModal(item)}

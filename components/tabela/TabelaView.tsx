@@ -5,6 +5,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   closestCenter,
   MeasuringStrategy,
   useSensor,
@@ -90,10 +91,13 @@ function buildHierarchicalList(
 
   walk(null, 0);
 
-  // Also add orphaned items
+  // Add orphaned items (parent filtered out, NOT just collapsed)
   const addedIds = new Set(result.map((r) => r.item.id));
+  const allItemIds = new Set(items.map((i) => i.id));
   for (const item of items) {
     if (!addedIds.has(item.id)) {
+      // If the parent exists in the list, this item was hidden due to collapse — skip
+      if (item.parentId !== null && allItemIds.has(item.parentId)) continue;
       const depth = item.tipo === 'projeto' ? 0 : item.tipo === 'tarefa' ? 1 : 2;
       const hasChildren = (childrenMap.get(item.id)?.length ?? 0) > 0;
       result.push({ item, depth, hasChildren });
@@ -109,14 +113,39 @@ function tipoForParent(parentItem: Item | undefined): Tipo {
   return 'subtarefa';
 }
 
+// Zone split: 40% above / 20% inside / 40% below — nesting requires precision
 function computeZone(pointerY: number, rect: { top: number; height: number }, targetItem: Item): DropZone {
   const relative = (pointerY - rect.top) / rect.height;
+  // Subtarefas can't have children — only above/below
   if (targetItem.tipo === 'subtarefa') {
     return relative < 0.5 ? 'above' : 'below';
   }
-  if (relative < 0.25) return 'above';
-  if (relative > 0.75) return 'below';
+  if (relative < 0.4) return 'above';
+  if (relative > 0.6) return 'below';
   return 'inside';
+}
+
+// Validate if the drop is allowed per hierarchy rules
+function canDrop(draggedItem: Item, targetItem: Item, zone: DropZone, allItems: Item[]): boolean {
+  if (draggedItem.id === targetItem.id) return false;
+
+  // Prevent dropping on own descendant
+  let parent: Item | undefined = targetItem;
+  while (parent) {
+    if (parent.id === draggedItem.id) return false;
+    parent = parent.parentId ? allItems.find((i) => i.id === parent!.parentId) : undefined;
+  }
+
+  if (zone === 'inside') {
+    // Projetos can't be nested inside anything
+    if (draggedItem.tipo === 'projeto') return false;
+    // Can only nest inside projeto (→tarefa) or tarefa (→subtarefa)
+    if (targetItem.tipo === 'subtarefa') return false;
+    return true;
+  }
+
+  // above/below: always allowed (becomes sibling of target)
+  return true;
 }
 
 export function TabelaView() {
@@ -128,6 +157,7 @@ export function TabelaView() {
 
   const pointerYRef = useRef(0);
   const [dropTarget, setDropTarget] = useState<{ itemId: string; zone: DropZone } | null>(null);
+  const dropTargetRef = useRef<{ itemId: string; zone: DropZone } | null>(null);
 
   // Track pointer position during drag
   useEffect(() => {
@@ -158,7 +188,10 @@ export function TabelaView() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
     }),
   );
 
@@ -216,46 +249,58 @@ export function TabelaView() {
 
   // Update visual indicator during drag (fires continuously)
   const handleDragMove = useCallback((event: DragMoveEvent) => {
-    const { over } = event;
+    const { active, over } = event;
     if (!over) {
+      dropTargetRef.current = null;
       setDropTarget(null);
       return;
     }
+    const draggedItem = active.data.current?.item as Item | undefined;
     const targetItem = over.data.current?.item as Item | undefined;
-    if (!targetItem) {
+    if (!targetItem || !draggedItem || draggedItem.id === targetItem.id) {
+      dropTargetRef.current = null;
       setDropTarget(null);
       return;
     }
     const zone = computeZone(pointerYRef.current, over.rect, targetItem);
-    setDropTarget({ itemId: targetItem.id, zone });
-  }, []);
+    // Validate drop — don't show indicator if invalid
+    if (!canDrop(draggedItem, targetItem, zone, items)) {
+      dropTargetRef.current = null;
+      setDropTarget(null);
+      return;
+    }
+    const target = { itemId: targetItem.id, zone };
+    dropTargetRef.current = target;
+    setDropTarget(target);
+  }, [items]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const currentTarget = dropTargetRef.current;
+
     setActiveItem(null);
     setDropTarget(null);
+    dropTargetRef.current = null;
 
     const { active, over } = event;
-    if (!over) return;
+    if (!over || !currentTarget) return;
 
     const draggedItem = active.data.current?.item as Item | undefined;
     const targetItem = over.data.current?.item as Item | undefined;
 
     if (!draggedItem || !targetItem || draggedItem.id === targetItem.id) return;
 
-    // Prevent dropping on own descendant
-    let parent: Item | undefined = targetItem;
-    while (parent) {
-      if (parent.id === draggedItem.id) return;
-      parent = parent.parentId ? items.find((i) => i.id === parent!.parentId) : undefined;
-    }
+    const zone = currentTarget.zone;
 
-    const zone = computeZone(pointerYRef.current, over.rect, targetItem);
+    // Final validation
+    if (!canDrop(draggedItem, targetItem, zone, items)) return;
 
     if (zone === 'inside') {
+      // Nest as child of target
       const newTipo = tipoForParent(targetItem);
       const siblingCount = items.filter((i) => i.parentId === targetItem.id).length;
       moveItem(draggedItem.id, targetItem.id, newTipo, siblingCount);
     } else {
+      // Place as sibling of target (above or below)
       const newParentId = targetItem.parentId;
       const newTipo = tipoForParent(newParentId ? items.find((i) => i.id === newParentId) : undefined);
       const siblings = items
