@@ -6,12 +6,17 @@ import {
   DragOverlay,
   PointerSensor,
   closestCenter,
+  MeasuringStrategy,
   useSensor,
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-  type DragOverEvent,
+  type DragMoveEvent,
 } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useMementotask } from '@/lib/context';
 import type { Item, Tipo } from '@/lib/types';
 import { TabelaRow, type DropZone } from './TabelaRow';
@@ -32,6 +37,12 @@ const COLUMNS: { key: SortKey; label: string; className?: string }[] = [
 
 const ACOES_COLUMN = { label: 'Ações' };
 const COLLAPSED_KEY = 'mementotask_collapsed';
+
+const measuring = {
+  droppable: {
+    strategy: MeasuringStrategy.Always,
+  },
+};
 
 function loadCollapsed(): Set<string> {
   if (typeof window === 'undefined') return new Set();
@@ -71,7 +82,6 @@ function buildHierarchicalList(
     for (const child of children) {
       const hasChildren = (childrenMap.get(child.id)?.length ?? 0) > 0;
       result.push({ item: child, depth, hasChildren });
-      // Skip children if this item is collapsed
       if (!collapsed.has(child.id)) {
         walk(child.id, depth + 1);
       }
@@ -80,7 +90,7 @@ function buildHierarchicalList(
 
   walk(null, 0);
 
-  // Also add orphaned items (filtered items whose parent is not in the set)
+  // Also add orphaned items
   const addedIds = new Set(result.map((r) => r.item.id));
   for (const item of items) {
     if (!addedIds.has(item.id)) {
@@ -93,17 +103,14 @@ function buildHierarchicalList(
   return result;
 }
 
-// Determine tipo based on new parent
 function tipoForParent(parentItem: Item | undefined): Tipo {
   if (!parentItem) return 'projeto';
   if (parentItem.tipo === 'projeto') return 'tarefa';
   return 'subtarefa';
 }
 
-// Compute drop zone from pointer Y position relative to the row rect
 function computeZone(pointerY: number, rect: { top: number; height: number }, targetItem: Item): DropZone {
   const relative = (pointerY - rect.top) / rect.height;
-  // Subtarefas can't have children — only above/below
   if (targetItem.tipo === 'subtarefa') {
     return relative < 0.5 ? 'above' : 'below';
   }
@@ -119,7 +126,6 @@ export function TabelaView() {
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-  // Track pointer Y and current drop target for visual indicators
   const pointerYRef = useRef(0);
   const [dropTarget, setDropTarget] = useState<{ itemId: string; zone: DropZone } | null>(null);
 
@@ -133,7 +139,6 @@ export function TabelaView() {
     return () => document.removeEventListener('pointermove', handler);
   }, [activeItem]);
 
-  // Load collapsed state from localStorage on mount
   useEffect(() => {
     setCollapsed(loadCollapsed());
   }, []);
@@ -198,13 +203,19 @@ export function TabelaView() {
     return buildHierarchicalList(sorted, collapsed);
   }, [filteredItems, sortKey, sortDir, collapsed]);
 
+  // Flat list of IDs for SortableContext
+  const sortedIds = useMemo(
+    () => sortedItems.map(({ item }) => item.id),
+    [sortedItems],
+  );
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const item = event.active.data.current?.item as Item | undefined;
     if (item) setActiveItem(item);
   }, []);
 
-  // Update visual indicator during drag
-  const handleDragOver = useCallback((event: DragOverEvent) => {
+  // Update visual indicator during drag (fires continuously)
+  const handleDragMove = useCallback((event: DragMoveEvent) => {
     const { over } = event;
     if (!over) {
       setDropTarget(null);
@@ -238,7 +249,6 @@ export function TabelaView() {
       parent = parent.parentId ? items.find((i) => i.id === parent!.parentId) : undefined;
     }
 
-    // Compute zone from pointer position
     const zone = computeZone(pointerYRef.current, over.rect, targetItem);
 
     if (zone === 'inside') {
@@ -246,7 +256,6 @@ export function TabelaView() {
       const siblingCount = items.filter((i) => i.parentId === targetItem.id).length;
       moveItem(draggedItem.id, targetItem.id, newTipo, siblingCount);
     } else {
-      // Move as sibling (above or below the target)
       const newParentId = targetItem.parentId;
       const newTipo = tipoForParent(newParentId ? items.find((i) => i.id === newParentId) : undefined);
       const siblings = items
@@ -262,8 +271,9 @@ export function TabelaView() {
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      measuring={measuring}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={() => { setActiveItem(null); setDropTarget(null); }}
     >
@@ -297,17 +307,19 @@ export function TabelaView() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {sortedItems.map(({ item, depth, hasChildren }) => (
-              <TabelaRow
-                key={item.id}
-                item={item}
-                depth={depth}
-                hasChildren={hasChildren}
-                isCollapsed={collapsed.has(item.id)}
-                onToggleCollapse={toggleCollapse}
-                dropIndicator={dropTarget?.itemId === item.id ? dropTarget.zone : null}
-              />
-            ))}
+            <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
+              {sortedItems.map(({ item, depth, hasChildren }) => (
+                <TabelaRow
+                  key={item.id}
+                  item={item}
+                  depth={depth}
+                  hasChildren={hasChildren}
+                  isCollapsed={collapsed.has(item.id)}
+                  onToggleCollapse={toggleCollapse}
+                  dropIndicator={dropTarget?.itemId === item.id ? dropTarget.zone : null}
+                />
+              ))}
+            </SortableContext>
             {sortedItems.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-text-muted">

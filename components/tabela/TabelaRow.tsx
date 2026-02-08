@@ -1,6 +1,6 @@
 'use client';
 
-import { useDraggable, useDroppable } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
 import type { Item, Status } from '@/lib/types';
 import { STATUSES, STATUS_LABELS } from '@/lib/types';
 import { useMementotask } from '@/lib/context';
@@ -32,28 +32,23 @@ export function TabelaRow({ item, depth, hasChildren, isCollapsed, onToggleColla
 
   const childTipo = item.tipo === 'projeto' ? 'tarefa' : item.tipo === 'tarefa' ? 'subtarefa' : null;
 
-  // Draggable
+  // useSortable combines draggable + droppable with proper ref management
   const {
-    attributes: dragAttributes,
-    listeners: dragListeners,
-    setNodeRef: setDragRef,
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
     isDragging,
-  } = useDraggable({
-    id: `drag-${item.id}`,
-    data: { item },
-  });
-
-  // Single droppable for the whole row
-  const { setNodeRef: setDropRef } = useDroppable({
-    id: `drop-${item.id}`,
+  } = useSortable({
+    id: item.id,
     data: { item },
   });
 
   return (
     <tr
-      ref={setDropRef}
+      ref={setNodeRef}
       className={cn(
-        'group/row bg-surface-1 transition-colors hover:bg-surface-2 cursor-pointer relative',
+        'group/row bg-surface-1 transition-colors hover:bg-surface-2 cursor-pointer',
         isDragging && 'opacity-30',
         dropIndicator === 'inside' && 'ring-2 ring-inset ring-accent-projeto/50',
       )}
@@ -69,12 +64,12 @@ export function TabelaRow({ item, depth, hasChildren, isCollapsed, onToggleColla
           <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-accent-projeto rounded-full z-20 pointer-events-none" />
         )}
 
-        <div className="relative z-20 flex items-center gap-1.5" style={{ paddingLeft: `${depth * 20}px` }}>
-          {/* Grip handle — aparece no hover */}
+        <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 20}px` }}>
+          {/* Grip handle — aparece no hover, activator for drag */}
           <div
-            ref={setDragRef}
-            {...dragAttributes}
-            {...dragListeners}
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
             onClick={(e) => e.stopPropagation()}
             className="opacity-0 group-hover/row:opacity-100 shrink-0 cursor-grab active:cursor-grabbing rounded p-0.5 text-text-muted hover:bg-surface-3 hover:text-text-primary transition-all"
           >
