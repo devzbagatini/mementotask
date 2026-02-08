@@ -5,6 +5,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
   type DragStartEvent,
@@ -193,9 +194,11 @@ export function TabelaView() {
       parent = parent.parentId ? items.find((i) => i.id === parent!.parentId) : undefined;
     }
 
-    if (dropZone === 'inside') {
-      // Nest as child — can't nest inside subtarefa
-      if (targetItem.tipo === 'subtarefa') return;
+    // Determine effective zone — subtarefas can't have children, fallback to 'below'
+    const effectiveZone =
+      dropZone === 'inside' && targetItem.tipo === 'subtarefa' ? 'below' : dropZone;
+
+    if (effectiveZone === 'inside') {
       const newTipo = tipoForParent(targetItem);
       const siblingCount = items.filter((i) => i.parentId === targetItem.id).length;
       moveItem(draggedItem.id, targetItem.id, newTipo, siblingCount);
@@ -207,7 +210,7 @@ export function TabelaView() {
         .filter((i) => i.parentId === newParentId && i.id !== draggedItem.id)
         .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
       const targetSiblingIdx = siblings.findIndex((s) => s.id === targetItem.id);
-      const insertIdx = dropZone === 'below' ? targetSiblingIdx + 1 : targetSiblingIdx;
+      const insertIdx = effectiveZone === 'below' ? targetSiblingIdx + 1 : targetSiblingIdx;
       moveItem(draggedItem.id, newParentId, newTipo, Math.max(0, insertIdx));
     }
   }, [items, moveItem]);
@@ -215,6 +218,7 @@ export function TabelaView() {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveItem(null)}

@@ -65,10 +65,10 @@ export function TabelaRow({ item, depth, hasChildren, isCollapsed, onToggleColla
     >
       {/* Nome (with grip, hover +, checkbox, indentation) */}
       <td className="px-4 py-3 relative">
-        {/* Drop zones — pointer-events-none para não bloquear cliques (dnd-kit usa detecção por geometria) */}
+        {/* Drop zones — 25% acima / 50% dentro / 25% abaixo, pointer-events-none para não bloquear cliques */}
         <div
           ref={setAboveRef}
-          className="absolute top-0 left-0 right-0 h-[6px] z-10 pointer-events-none"
+          className="absolute top-0 left-0 right-0 h-1/4 z-10 pointer-events-none"
         />
         {isOverAbove && (
           <div className="absolute top-0 left-4 right-4 h-[2px] bg-accent-projeto rounded-full z-20 pointer-events-none" />
@@ -76,12 +76,12 @@ export function TabelaRow({ item, depth, hasChildren, isCollapsed, onToggleColla
 
         <div
           ref={setInsideRef}
-          className="absolute top-[6px] left-0 right-0 bottom-[6px] z-10 pointer-events-none"
+          className="absolute top-1/4 left-0 right-0 bottom-1/4 z-10 pointer-events-none"
         />
 
         <div
           ref={setBelowRef}
-          className="absolute bottom-0 left-0 right-0 h-[6px] z-10 pointer-events-none"
+          className="absolute bottom-0 left-0 right-0 h-1/4 z-10 pointer-events-none"
         />
         {isOverBelow && (
           <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-accent-projeto rounded-full z-20 pointer-events-none" />
