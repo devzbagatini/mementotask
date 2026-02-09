@@ -22,6 +22,7 @@ interface MementotaskContextValue {
   filteredItems: Item[];
   uniqueTipoProjeto: string[];
   uniqueClientes: string[];
+  uniqueTarefas: { id: string; nome: string }[];
   modalState: ModalState;
   confirmState: ConfirmState;
   addItem: (data: ItemCreate) => void;
@@ -178,7 +179,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
   }, [state.confirm.itemId, state.items]);
 
   const filteredItems = useMemo(() => {
-    const { status, tipoProjeto, cliente, busca } = state.filter;
+    const { status, tipoProjeto, cliente, tarefa, busca } = state.filter;
 
     // Helper to find root project of an item
     function findRootProject(item: Item): Item | undefined {
@@ -187,6 +188,36 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
         current = state.items.find((i) => i.id === current!.parentId);
       }
       return current;
+    }
+
+    // When filtering by tarefa, show only the tarefa itself and its subtarefas
+    if (tarefa) {
+      const tarefaItem = state.items.find((i) => i.id === tarefa);
+      if (!tarefaItem) return [];
+
+      // Collect the tarefa + all its descendants
+      const ids = new Set<string>([tarefa]);
+      function collectDescendants(parentId: string) {
+        for (const item of state.items) {
+          if (item.parentId === parentId) {
+            ids.add(item.id);
+            collectDescendants(item.id);
+          }
+        }
+      }
+      collectDescendants(tarefa);
+
+      return state.items.filter((item) => {
+        if (!ids.has(item.id)) return false;
+        if (status !== 'todos' && item.status !== status) return false;
+        if (busca) {
+          const term = busca.toLowerCase();
+          const matchesName = item.nome.toLowerCase().includes(term);
+          const matchesDesc = item.descricao?.toLowerCase().includes(term);
+          if (!matchesName && !matchesDesc) return false;
+        }
+        return true;
+      });
     }
 
     return state.items.filter((item) => {
@@ -237,6 +268,15 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
     [state.items],
   );
 
+  const uniqueTarefas = useMemo(
+    () =>
+      state.items
+        .filter((i) => i.tipo === 'tarefa')
+        .sort((a, b) => a.nome.localeCompare(b.nome))
+        .map((i) => ({ id: i.id, nome: i.nome })),
+    [state.items],
+  );
+
   const value = useMemo<MementotaskContextValue>(
     () => ({
       items: state.items,
@@ -245,6 +285,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
       filteredItems,
       uniqueTipoProjeto,
       uniqueClientes,
+      uniqueTarefas,
       modalState: state.modal,
       confirmState: state.confirm,
       addItem,
@@ -272,6 +313,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
       filteredItems,
       uniqueTipoProjeto,
       uniqueClientes,
+      uniqueTarefas,
       addItem,
       editItem,
       removeItem,

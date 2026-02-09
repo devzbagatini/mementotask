@@ -94,5 +94,6 @@ export interface FilterState {
   status: Status | 'todos';
   tipoProjeto: string;
   cliente: string;
+  tarefa: string;
   busca: string;
 }

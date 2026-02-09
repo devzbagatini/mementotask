@@ -40,6 +40,7 @@ export const initialState: AppState = {
     status: 'todos',
     tipoProjeto: '',
     cliente: '',
+    tarefa: '',
     busca: '',
   },
   view: 'kanban',
