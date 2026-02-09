@@ -136,48 +136,75 @@ export async function deleteWorkspace(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// Workspace Members
+// Workspace Invites
 export async function inviteMember(
   workspaceId: string,
   email: string,
   role: WorkspaceMember['role'],
   invitedBy: string
-): Promise<WorkspaceMember> {
+): Promise<{ id: string; email: string; role: string; invitedAt: string }> {
   if (!supabase) throw new Error('Supabase not configured');
 
-  // Buscar usuário pelo email
-  const { data: userData, error: userError } = await supabase
-    .from('auth.users')
-    .select('id')
-    .eq('email', email)
-    .single();
-
-  if (userError || !userData) {
-    throw new Error('Usuário não encontrado. O usuário precisa ter uma conta.');
-  }
-
   const { data, error } = await supabase
-    .from('workspace_members')
+    .from('workspace_invites')
     .insert({
       workspace_id: workspaceId,
-      user_id: userData.id,
+      email: email.toLowerCase().trim(),
       role,
       invited_by: invitedBy,
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('Convite já enviado para este email neste workspace.');
+    }
+    throw error;
+  }
 
   return {
     id: data.id,
-    workspaceId: data.workspace_id,
-    userId: data.user_id,
+    email: data.email,
     role: data.role,
-    invitedBy: data.invited_by,
     invitedAt: data.invited_at,
-    acceptedAt: data.accepted_at,
   };
+}
+
+// Accept invite
+export async function acceptInvite(inviteId: string): Promise<void> {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { error } = await supabase
+    .rpc('accept_workspace_invite', {
+      invite_id: inviteId,
+      user_id: (await supabase.auth.getUser()).data.user?.id
+    });
+
+  if (error) throw error;
+}
+
+// Load pending invites for current user
+export async function loadPendingInvites(): Promise<any[]> {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('workspace_invites')
+    .select(`
+      id,
+      workspace_id,
+      role,
+      invited_at,
+      workspaces(nome, descricao, owner_id)
+    `)
+    .eq('email', user.email)
+    .is('accepted_at', null);
+
+  if (error) throw error;
+  return data || [];
 }
 
 export async function removeMember(workspaceId: string, userId: string): Promise<void> {

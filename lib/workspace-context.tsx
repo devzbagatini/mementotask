@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { useAuth } from './auth-context';
 import { useToast } from './toast';
-import type { Workspace, WorkspaceWithRole, WorkspaceMember } from './types';
+import type { Workspace, WorkspaceWithRole, WorkspaceMember, WorkspaceInvite } from './types';
 import {
   loadWorkspaces,
   createWorkspace,
@@ -19,12 +19,15 @@ import {
   removeMember,
   updateMemberRole,
   loadWorkspaceMembers,
+  loadPendingInvites,
+  acceptInvite,
 } from './workspace-storage';
 
 interface WorkspaceContextValue {
   workspaces: WorkspaceWithRole[];
   currentWorkspace: WorkspaceWithRole | null;
   members: WorkspaceMember[];
+  pendingInvites: any[];
   loading: boolean;
   setCurrentWorkspace: (workspace: WorkspaceWithRole | null) => void;
   createNewWorkspace: (nome: string, descricao?: string) => Promise<void>;
@@ -35,6 +38,8 @@ interface WorkspaceContextValue {
   changeMemberRole: (userId: string, role: WorkspaceMember['role']) => Promise<void>;
   refreshMembers: () => Promise<void>;
   refreshWorkspaces: () => Promise<void>;
+  loadInvites: () => Promise<void>;
+  acceptWorkspaceInvite: (inviteId: string) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -47,6 +52,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [workspaces, setWorkspaces] = useState<WorkspaceWithRole[]>([]);
   const [currentWorkspace, setCurrentWorkspaceState] = useState<WorkspaceWithRole | null>(null);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Load workspaces on mount
@@ -237,10 +243,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     await loadUserWorkspaces();
   }
 
+  async function loadInvites() {
+    try {
+      const invites = await loadPendingInvites();
+      setPendingInvites(invites);
+    } catch (error) {
+      console.error('Error loading invites:', error);
+    }
+  }
+
+  async function acceptWorkspaceInvite(inviteId: string) {
+    try {
+      await acceptInvite(inviteId);
+      addToast('Convite aceito!');
+      await loadInvites();
+      await loadUserWorkspaces();
+    } catch (error: any) {
+      console.error('Error accepting invite:', error);
+      addToast(error.message || 'Erro ao aceitar convite');
+      throw error;
+    }
+  }
+
   const value: WorkspaceContextValue = {
     workspaces,
     currentWorkspace,
     members,
+    pendingInvites,
     loading,
     setCurrentWorkspace,
     createNewWorkspace,
@@ -251,6 +280,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     changeMemberRole,
     refreshMembers,
     refreshWorkspaces,
+    loadInvites,
+    acceptWorkspaceInvite,
   };
 
   return (

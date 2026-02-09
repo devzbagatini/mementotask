@@ -142,6 +142,17 @@ export interface WorkspaceMember {
   acceptedAt?: string;
 }
 
+export interface WorkspaceInvite {
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: WorkspaceRole;
+  invitedBy: string;
+  invitedAt: string;
+  acceptedAt?: string;
+  acceptedBy?: string;
+}
+
 export interface WorkspaceWithRole extends Workspace {
   role: WorkspaceRole;
   memberCount: number;
