@@ -9,6 +9,7 @@ const MOTTO_TRANSLATIONS: Record<string, string> = {
   'Lux in tenebris lucet': 'A luz brilha nas trevas',
   'Per aspera ad astra': 'Atraves das dificuldades, ate as estrelas',
   'Ars longa, vita brevis': 'A arte e longa, a vida e breve',
+  'Simplicitas est ultimata sophisticatio': 'A simplicidade e a sofisticacao suprema',
 };
 
 interface PresetCardProps {
