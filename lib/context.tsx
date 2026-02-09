@@ -7,13 +7,18 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useState,
   type ReactNode,
 } from 'react';
 import type { Item, ItemCreate, FilterState, ViewType, Tipo } from './types';
 import { appReducer, initialState, type ModalState, type ConfirmState } from './reducer';
-import { loadItems, saveItems, createItem, updateItem, deleteItem } from './storage';
+import { loadItems as loadLocalItems, saveItems as saveLocalItems, createItem as createLocalItem, updateItem as updateLocalItem, deleteItem as deleteLocalItem } from './storage';
+import { loadItems as loadSupabaseItems, createItem as createSupabaseItem, updateItem as updateSupabaseItem, deleteItem as deleteSupabaseItem } from './supabase-storage';
+import { loadItemsByWorkspace, createItemInWorkspace } from './workspace-storage';
+import { useWorkspace } from './workspace-context';
 import { calculateProgress, getUniqueClientes } from './utils';
 import { MOCK_DATA } from './mock-data';
+import { useAuth } from './auth-context';
 
 interface MementotaskContextValue {
   items: Item[];
@@ -26,9 +31,10 @@ interface MementotaskContextValue {
   uniqueResponsaveis: string[];
   modalState: ModalState;
   confirmState: ConfirmState;
-  addItem: (data: ItemCreate) => void;
-  editItem: (id: string, changes: Partial<Item>) => void;
-  removeItem: (id: string) => void;
+  isLoading: boolean;
+  addItem: (data: ItemCreate) => Promise<void>;
+  editItem: (id: string, changes: Partial<Item>) => Promise<void>;
+  removeItem: (id: string) => Promise<void>;
   setFilter: (filter: Partial<FilterState>) => void;
   setView: (view: ViewType) => void;
   getChildrenOf: (parentId: string) => Item[];
@@ -37,56 +43,139 @@ interface MementotaskContextValue {
   openCreateModal: (tipo: Tipo, parentId?: string | null, status?: string) => void;
   openEditModal: (item: Item) => void;
   closeModal: () => void;
-  moveItem: (itemId: string, newParentId: string | null, newTipo: Tipo, targetIndex: number) => void;
+  moveItem: (itemId: string, newParentId: string | null, newTipo: Tipo, targetIndex: number) => Promise<void>;
   confirmDelete: (id: string, nome: string) => void;
   cancelDelete: () => void;
-  executeDelete: () => void;
+  executeDelete: () => Promise<void>;
 }
 
 const MementotaskContext = createContext<MementotaskContextValue | null>(null);
 
 export function MementotaskProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const { user } = useAuth();
+  const { currentWorkspace } = useWorkspace();
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load from localStorage on mount, seed mock data if empty
+  // Load items - Supabase with workspace support if logged in, localStorage otherwise
   useEffect(() => {
-    let items = loadItems();
-    if (items.length === 0) {
-      items = MOCK_DATA;
-      saveItems(items);
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        let items: Item[];
+        
+        if (user) {
+          // Load from Supabase with workspace filter
+          const workspaceId = currentWorkspace?.id || null;
+          items = await loadItemsByWorkspace(workspaceId, user.id);
+          
+          if (items.length === 0 && !currentWorkspace) {
+            // Seed with mock data for new users (only in personal space)
+            for (const mockItem of MOCK_DATA) {
+              await createItemInWorkspace(user.id, null, mockItem);
+            }
+            items = await loadItemsByWorkspace(null, user.id);
+          }
+        } else {
+          // Load from localStorage
+          items = loadLocalItems();
+          if (items.length === 0) {
+            items = MOCK_DATA;
+            saveLocalItems(items);
+          }
+        }
+        
+        dispatch({ type: 'SET_ITEMS', payload: items });
+      } catch (error) {
+        console.error('Error loading items:', error);
+        // Fallback to localStorage on error
+        const items = loadLocalItems();
+        dispatch({ type: 'SET_ITEMS', payload: items.length > 0 ? items : MOCK_DATA });
+      } finally {
+        setIsLoading(false);
+      }
     }
-    dispatch({ type: 'SET_ITEMS', payload: items });
-  }, []);
+    
+    loadData();
+  }, [user, currentWorkspace?.id]);
 
-  // Sync to localStorage on items change (skip initial empty state)
+  // Sync to localStorage when not using Supabase
   useEffect(() => {
-    if (state.items.length > 0) {
-      saveItems(state.items);
+    if (!user && state.items.length > 0) {
+      saveLocalItems(state.items);
     }
-  }, [state.items]);
+  }, [state.items, user]);
 
   const addItem = useCallback(
-    (data: ItemCreate) => {
-      const newItems = createItem(state.items, data);
-      dispatch({ type: 'SET_ITEMS', payload: newItems });
+    async (data: ItemCreate) => {
+      setIsLoading(true);
+      try {
+        if (user) {
+          // Create in Supabase with workspace
+          const workspaceId = currentWorkspace?.id || null;
+          await createItemInWorkspace(user.id, workspaceId, data);
+          const items = await loadItemsByWorkspace(workspaceId, user.id);
+          dispatch({ type: 'SET_ITEMS', payload: items });
+        } else {
+          // Create in localStorage
+          const newItems = createLocalItem(state.items, data);
+          dispatch({ type: 'SET_ITEMS', payload: newItems });
+        }
+      } catch (error) {
+        console.error('Error adding item:', error);
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [state.items],
+    [state.items, user, currentWorkspace?.id],
   );
 
   const editItem = useCallback(
-    (id: string, changes: Partial<Item>) => {
-      const newItems = updateItem(state.items, id, changes);
-      dispatch({ type: 'SET_ITEMS', payload: newItems });
+    async (id: string, changes: Partial<Item>) => {
+      setIsLoading(true);
+      try {
+        if (user) {
+          // Update in Supabase
+          await updateSupabaseItem(id, changes);
+          const workspaceId = currentWorkspace?.id || null;
+          const items = await loadItemsByWorkspace(workspaceId, user.id);
+          dispatch({ type: 'SET_ITEMS', payload: items });
+        } else {
+          // Update in localStorage
+          const newItems = updateLocalItem(state.items, id, changes);
+          dispatch({ type: 'SET_ITEMS', payload: newItems });
+        }
+      } catch (error) {
+        console.error('Error editing item:', error);
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [state.items],
+    [state.items, user, currentWorkspace?.id],
   );
 
   const removeItem = useCallback(
-    (id: string) => {
-      const newItems = deleteItem(state.items, id);
-      dispatch({ type: 'SET_ITEMS', payload: newItems });
+    async (id: string) => {
+      setIsLoading(true);
+      try {
+        if (user) {
+          // Delete from Supabase
+          await deleteSupabaseItem(id);
+          const workspaceId = currentWorkspace?.id || null;
+          const items = await loadItemsByWorkspace(workspaceId, user.id);
+          dispatch({ type: 'SET_ITEMS', payload: items });
+        } else {
+          // Delete from localStorage
+          const newItems = deleteLocalItem(state.items, id);
+          dispatch({ type: 'SET_ITEMS', payload: newItems });
+        }
+      } catch (error) {
+        console.error('Error removing item:', error);
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [state.items],
+    [state.items, user, currentWorkspace?.id],
   );
 
   const setFilter = useCallback((filter: Partial<FilterState>) => {
@@ -136,30 +225,45 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
 
   // Move item (reorder / reparent)
   const moveItem = useCallback(
-    (itemId: string, newParentId: string | null, newTipo: Tipo, targetIndex: number) => {
-      let newItems = [...state.items];
-      const itemIdx = newItems.findIndex((i) => i.id === itemId);
-      if (itemIdx === -1) return;
+    async (itemId: string, newParentId: string | null, newTipo: Tipo, targetIndex: number) => {
+      setIsLoading(true);
+      try {
+        let newItems = [...state.items];
+        const itemIdx = newItems.findIndex((i) => i.id === itemId);
+        if (itemIdx === -1) return;
 
-      // Update item's parentId, tipo, and ordem
-      const now = new Date().toISOString();
-      newItems[itemIdx] = { ...newItems[itemIdx], parentId: newParentId, tipo: newTipo, atualizadoEm: now };
+        // Update item's parentId, tipo, and ordem
+        const now = new Date().toISOString();
+        newItems[itemIdx] = { ...newItems[itemIdx], parentId: newParentId, tipo: newTipo, atualizadoEm: now };
 
-      // Re-number siblings in the target parent
-      const siblings = newItems
-        .filter((i) => i.parentId === newParentId && i.id !== itemId)
-        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+        // Re-number siblings in the target parent
+        const siblings = newItems
+          .filter((i) => i.parentId === newParentId && i.id !== itemId)
+          .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
 
-      siblings.splice(targetIndex, 0, newItems[itemIdx]);
-      siblings.forEach((s, i) => {
-        const idx = newItems.findIndex((n) => n.id === s.id);
-        if (idx !== -1) newItems[idx] = { ...newItems[idx], ordem: i + 1 };
-      });
+        siblings.splice(targetIndex, 0, newItems[itemIdx]);
+        siblings.forEach((s, i) => {
+          const idx = newItems.findIndex((n) => n.id === s.id);
+          if (idx !== -1) newItems[idx] = { ...newItems[idx], ordem: i + 1 };
+        });
 
-      saveItems(newItems);
-      dispatch({ type: 'SET_ITEMS', payload: newItems });
+        if (user) {
+          // Update in Supabase
+          await updateSupabaseItem(itemId, { parentId: newParentId, tipo: newTipo, ordem: targetIndex + 1 });
+          const items = await loadSupabaseItems(user.id);
+          dispatch({ type: 'SET_ITEMS', payload: items });
+        } else {
+          // Update in localStorage
+          saveLocalItems(newItems);
+          dispatch({ type: 'SET_ITEMS', payload: newItems });
+        }
+      } catch (error) {
+        console.error('Error moving item:', error);
+      } finally {
+        setIsLoading(false);
+      }
     },
-    [state.items],
+    [state.items, user],
   );
 
   // Confirm dialog actions
@@ -171,13 +275,12 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'CLOSE_CONFIRM' });
   }, []);
 
-  const executeDelete = useCallback(() => {
+  const executeDelete = useCallback(async () => {
     if (state.confirm.itemId) {
-      const newItems = deleteItem(state.items, state.confirm.itemId);
-      dispatch({ type: 'SET_ITEMS', payload: newItems });
+      await removeItem(state.confirm.itemId);
     }
     dispatch({ type: 'CLOSE_CONFIRM' });
-  }, [state.confirm.itemId, state.items]);
+  }, [state.confirm.itemId, removeItem]);
 
   const filteredItems = useMemo(() => {
     const { status, prioridade, projeto, cliente, tarefa, responsavel, busca } = state.filter;
@@ -294,6 +397,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
       uniqueResponsaveis,
       modalState: state.modal,
       confirmState: state.confirm,
+      isLoading,
       addItem,
       editItem,
       removeItem,
@@ -316,6 +420,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
       state.view,
       state.modal,
       state.confirm,
+      isLoading,
       filteredItems,
       uniqueProjetos,
       uniqueClientes,

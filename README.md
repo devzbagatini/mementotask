@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# dot-claude-code-installation
 
-## Getting Started
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Last Commit](https://img.shields.io/github/last-commit/mateusoliveirab/dot-claude-code-installation)](https://github.com/mateusoliveirab/dot-claude-code-installation/commits/main)
+[![Repo Size](https://img.shields.io/github/repo-size/mateusoliveirab/dot-claude-code-installation)](https://github.com/mateusoliveirab/dot-claude-code-installation)
+[![Made with Bash](https://img.shields.io/badge/Made%20with-Bash-1f425f.svg?logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
+[![VS Code](https://img.shields.io/badge/VS%20Code-Development-007ACC?logo=visualstudiocode&logoColor=white)](https://code.visualstudio.com/)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com/)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Powered-d97757?logo=anthropic)](https://claude.com/claude-code)
+[![opencode](https://img.shields.io/badge/opencode-Powered-22c55e)](https://opencode.ai)
+[![Git](https://img.shields.io/badge/Git-Control-f05032?logo=git&logoColor=white)](https://git-scm.com/)
 
-First, run the development server:
+My personal Claude Code setup — modular rules, reusable skills, MCP servers, and sane defaults. Versioned with git and easy to install.
+
+The idea is simple: instead of one giant CLAUDE.md file, split instructions into focused rules that Claude loads automatically. Keep everything in git so you can track changes and sync across machines.
+
+If you already have a `~/.claude/CLAUDE.md`, don't worry — the install script preserves it. You can gradually migrate content to rules or keep using both.
+
+## What's Included
+
+### Core Instructions (`global/CLAUDE.md`)
+Base instructions that apply to every conversation — communication style, working approach, MCP usage.
+
+### Modular Rules (`global/rules/`)
+Topic-specific guidelines loaded automatically:
+
+| Rule | What it covers |
+|------|----------------|
+| `communication.md` | How I like to communicate, when to ask vs do |
+| `working-approach.md` | Task execution, fast mode usage |
+| `dev-workflow.md` | Git workflow, commit preferences |
+| `mcp-usage.md` | MCP shortcuts and guidelines |
+| `auto-memory.md` | When to update MEMORY.md |
+
+### Skills (`global/skills/`)
+Reusable workflows invoked with `/command`:
+
+| Skill | Command | What it does |
+|-------|---------|--------------|
+| `git-commit` | `/git-commit` | Conventional commits, groups by functionality |
+| `git-pr` | `/git-pr` | Generate PR content (I open manually to review) |
+
+### Settings (`global/settings.json`)
+- Thinking mode always on (use `/fast` for quick tasks)
+- Granular permissions — auto-approve safe operations, block dangerous ones
+- No prompt suggestions (cleaner experience)
+
+### MCP Servers (`global/mcp.json`)
+Pre-configured servers:
+- **Chrome DevTools** — UI validation
+- **Shadcn UI** — Component lookup
+- **Supabase** — DB operations (needs `SUPABASE_ACCESS_TOKEN`)
+
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/mateusoliveirab/dot-claude-code-installation.git
+cd dot-claude-code-installation
+
+# Optional: set up env vars for MCPs
+cp .env.example .env
+# edit .env with your tokens
+
+bash install.sh
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The script installs everything to `~/.claude/` and backs up existing configs. Restart Claude Code after install.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Needs:** `jq` for MCP merging (`sudo apt install jq` or `brew install jq`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Customizing
 
-## Learn More
+Add your own rules in `~/.claude/rules/`. Use frontmatter for control:
 
-To learn more about Next.js, take a look at the following resources:
+```markdown
+---
+description: React conventions
+paths: ["src/components/**/*"]
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Use TypeScript
+- Prefer function components
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Create new skills by copying `templates/skill-template/`. Check `global/skills/` for examples.
 
-## Deploy on Vercel
+Edit `~/.claude/settings.json` to tweak permissions.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+dot-claude-code-installation/
+├── install.sh              # One-command install
+├── global/
+│   ├── CLAUDE.md          # Core instructions
+│   ├── settings.json      # Permissions & preferences
+│   ├── mcp.json          # MCP server configs
+│   ├── skills/           # Reusable workflows
+│   │   ├── git-commit/
+│   │   └── git-pr/
+│   └── rules/            # Topic-specific rules
+└── templates/
+    └── skill-template/   # Copy this for new skills
+```
+
+## Why This Approach?
+
+- **Modular** — Rules by topic instead of one huge file
+- **Versioned** — Track changes per rule in git
+- **Reusable** — Skills work across projects
+- **Safe** — Granular permissions, fewer prompts for routine stuff
+
+## Things I Learned Using This Daily
+
+### Auto Memory exists (and you probably don't know about it)
+
+Claude Code has automatic memory at `~/.claude/projects/<project>/memory/MEMORY.md`. It's **local** (not versioned), where Claude writes learnings between conversations.
+
+**The key insight:** Don't rely on it alone. Important learnings should go to versioned files:
+
+| Use MEMORY.md for | Use versioned files for |
+|-------------------|-------------------------|
+| AI drafts, personal preferences | Official docs, team knowledge |
+| Short-term reminders | Architectural decisions |
+| Trial and error notes | `CLAUDE.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `docs/` |
+
+**Files that work well with Claude Code:**
+- `CLAUDE.md` — project-specific instructions for Claude
+- `CONTRIBUTING.md` — code standards, workflow, setup
+- `ARCHITECTURE.md` — technical decisions, why we chose X over Y
+- `docs/` — feature and module documentation
+
+If something in MEMORY.md matters for the team, promote it to proper documentation.
+
+[Full docs on auto memory →](docs/AUTO_MEMORY.md)
+
+## License
+
+MIT — feel free to use, modify, and distribute as needed.

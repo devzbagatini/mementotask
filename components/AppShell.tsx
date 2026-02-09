@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { MementotaskProvider, useMementotask } from '@/lib/context';
+import { AuthProvider } from '@/lib/auth-context';
+import { WorkspaceProvider } from '@/lib/workspace-context';
 import { ThemeProvider } from '@/lib/theme';
 import { SettingsProvider } from '@/lib/settings-context';
 import { ToastProvider } from '@/lib/toast';
 import { useToast } from '@/lib/toast';
+import { useAuth } from '@/lib/auth-context';
 import { BookOpen } from 'lucide-react';
 import { Header } from './Header';
 import { TabNav } from './TabNav';
@@ -19,11 +22,14 @@ import { ItemFormModal } from './forms/ItemFormModal';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { ToastContainer } from './ui/Toast';
 import { SettingsView } from './settings/SettingsView';
+import { AuthPage } from './auth/AuthPage';
 import { LiberView } from './liber/LiberView';
 import { DateTimeClock } from './DateTimeClock';
 import { PomodoroTimer } from './PomodoroTimer';
+import { WelcomeModal } from './WelcomeModal';
 
 function AppContent() {
+  const { user, loading } = useAuth();
   const { view, confirmState, cancelDelete, executeDelete, getChildrenOf } = useMementotask();
   const { addToast } = useToast();
   const [showSettings, setShowSettings] = useState(false);
@@ -38,6 +44,18 @@ function AppContent() {
     const nome = confirmState.itemNome;
     executeDelete();
     addToast(`"${nome}" excluído com sucesso`);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface-0">
+        <div className="text-text-muted">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
   }
 
   if (showSettings) {
@@ -100,20 +118,25 @@ function AppContent() {
         message={confirmMessage}
       />
       <ToastContainer />
+      <WelcomeModal />
     </div>
   );
 }
 
 export function AppShell() {
   return (
-    <ThemeProvider>
-      <SettingsProvider>
-        <ToastProvider>
-          <MementotaskProvider>
-            <AppContent />
-          </MementotaskProvider>
-        </ToastProvider>
-      </SettingsProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <SettingsProvider>
+          <ToastProvider>
+            <WorkspaceProvider>
+              <MementotaskProvider>
+                <AppContent />
+              </MementotaskProvider>
+            </WorkspaceProvider>
+          </ToastProvider>
+        </SettingsProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

@@ -5,6 +5,7 @@ export type KanbanStatus = 'a_fazer' | 'em_andamento' | 'pausado' | 'concluido';
 export type Prioridade = 'alta' | 'media' | 'baixa';
 export type Tipo = 'projeto' | 'tarefa' | 'subtarefa';
 export type ViewType = 'kanban' | 'tabela' | 'timeline' | 'clientes';
+export type Permissao = 'view' | 'edit' | 'admin';
 
 // ===== Constantes =====
 
@@ -44,6 +45,7 @@ export interface Item {
   status: Status;
   prioridade: Prioridade;
   parentId: string | null;
+  workspaceId?: string | null; // NULL = item pessoal (legado)
 
   // Dados específicos de Projeto
   cliente?: string;
@@ -100,4 +102,47 @@ export interface FilterState {
   tarefa: string;
   responsavel: string;
   busca: string;
+}
+
+export interface Share {
+  id: string;
+  itemId: string;
+  fromUserId: string;
+  toUserId: string;
+  permissao: Permissao;
+  criadoEm: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+}
+
+// ===== Workspace Types =====
+
+export type WorkspaceRole = 'owner' | 'admin' | 'editor' | 'viewer';
+
+export interface Workspace {
+  id: string;
+  nome: string;
+  descricao?: string;
+  ownerId: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: WorkspaceRole;
+  email?: string; // join with auth.users
+  invitedBy?: string;
+  invitedAt: string;
+  acceptedAt?: string;
+}
+
+export interface WorkspaceWithRole extends Workspace {
+  role: WorkspaceRole;
+  memberCount: number;
 }
