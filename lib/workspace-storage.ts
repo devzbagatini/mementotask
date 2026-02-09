@@ -280,12 +280,18 @@ export async function loadWorkspaceMembers(workspaceId: string): Promise<Workspa
 export async function loadItemsByWorkspace(workspaceId: string | null, userId: string): Promise<Item[]> {
   if (!supabase) throw new Error('Supabase not configured');
 
-  // Query simplificada - apenas itens do usuário (RLS filtra)
-  const { data, error } = await supabase
+  let query = supabase
     .from('items')
     .select('*')
-    .eq('user_id', userId)
-    .order('criado_em', { ascending: true });
+    .eq('user_id', userId);
+
+  if (workspaceId) {
+    query = query.eq('workspace_id', workspaceId);
+  } else {
+    query = query.is('workspace_id', null);
+  }
+
+  const { data, error } = await query.order('criado_em', { ascending: true });
 
   if (error) {
     console.error('Error loading items:', error);

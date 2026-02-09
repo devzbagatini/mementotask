@@ -47,6 +47,7 @@ interface MementotaskContextValue {
   confirmDelete: (id: string, nome: string) => void;
   cancelDelete: () => void;
   executeDelete: () => Promise<void>;
+  reloadItems: () => Promise<void>;
 }
 
 const MementotaskContext = createContext<MementotaskContextValue | null>(null);
@@ -97,6 +98,17 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
     }
     
     loadData();
+  }, [user, currentWorkspace?.id]);
+
+  const reloadItems = useCallback(async () => {
+    if (!user) return;
+    try {
+      const workspaceId = currentWorkspace?.id || null;
+      const items = await loadItemsByWorkspace(workspaceId, user.id);
+      dispatch({ type: 'SET_ITEMS', payload: items });
+    } catch (error) {
+      console.error('Error reloading items:', error);
+    }
   }, [user, currentWorkspace?.id]);
 
   // Sync to localStorage when not using Supabase
@@ -413,6 +425,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
       confirmDelete,
       cancelDelete,
       executeDelete,
+      reloadItems,
     }),
     [
       state.items,
