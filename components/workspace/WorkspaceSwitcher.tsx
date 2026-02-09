@@ -25,13 +25,90 @@ export function WorkspaceSwitcher() {
 
   if (workspaces.length === 0) {
     return (
-      <button
-        onClick={() => setShowCreate(true)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent-projeto text-white hover:opacity-90 transition-opacity"
-      >
-        <Plus className="h-4 w-4" />
-        <span className="text-sm font-medium">Criar Workspace</span>
-      </button>
+      <>
+        <button
+          onClick={() => {
+            console.log('🖱️ Click em "Criar Workspace" (sem workspaces)');
+            setShowCreate(true);
+          }}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent-projeto text-white hover:opacity-90 transition-opacity"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="text-sm font-medium">Criar Workspace</span>
+        </button>
+        
+        {/* Modal para criar workspace */}
+        {console.log('🎨 Renderizando Modal - showCreate:', showCreate)}
+        <Modal
+          isOpen={showCreate}
+          onClose={() => setShowCreate(false)}
+          title="Criar Novo Workspace"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">
+                Nome do Workspace
+              </label>
+              <input
+                type="text"
+                value={newWorkspaceName}
+                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                placeholder="Ex: Projetos Pessoais, Cliente ABC..."
+                className="w-full px-3 py-2 rounded-lg border border-border bg-surface-2 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-projeto"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">
+                Descrição (opcional)
+              </label>
+              <textarea
+                value={newWorkspaceDesc}
+                onChange={(e) => setNewWorkspaceDesc(e.target.value)}
+                placeholder="Descreva o propósito deste workspace..."
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-surface-2 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-projeto resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowCreate(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  console.log('🖱️ Botão Criar clicado!');
+                  if (!newWorkspaceName.trim() || isCreating) {
+                    console.log('⛔ Bloqueado');
+                    return;
+                  }
+                  setIsCreating(true);
+                  try {
+                    console.log('📤 Chamando createNewWorkspace...');
+                    await createNewWorkspace(newWorkspaceName, newWorkspaceDesc);
+                    console.log('✅ Sucesso!');
+                    setShowCreate(false);
+                    setNewWorkspaceName('');
+                    setNewWorkspaceDesc('');
+                  } catch (error: any) {
+                    console.error('❌ Erro:', error);
+                    alert('Erro: ' + error.message);
+                  } finally {
+                    setIsCreating(false);
+                  }
+                }}
+                disabled={!newWorkspaceName.trim() || isCreating}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-accent-projeto text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCreating ? 'Criando...' : 'Criar Workspace'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      </>
     );
   }
 
