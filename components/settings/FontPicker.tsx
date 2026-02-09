@@ -60,7 +60,7 @@ export function FontPicker({ slot, slotLabel, options, currentFamily, onSelect }
                     className="text-sm text-text-secondary truncate"
                     style={{ fontFamily: `'${opt.family}', ${opt.fallback}` }}
                   >
-                    Memento mori — AaBbCc 0123456789
+                    Nosce te ipsum — AaBbCc 0123456789
                   </p>
                 </button>
               ))}

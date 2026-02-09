@@ -1,90 +1,84 @@
 /* ============================================
-   MEMENTOTASK — TEMA
-   "Memento Mori" — Tons quentes, erudito, moderno.
-   Edite as variáveis abaixo para customizar o visual.
+   MEMENTOTASK — TEMA (CSS fallback)
+   Cores aplicadas via JS pelo SettingsProvider.
+   Este CSS serve como fallback antes do JS carregar.
    ============================================ */
 
-/* ===== Dark theme (padrão) ===== */
+/* ===== Dark theme (padrão — Memento Mori) ===== */
 :root,
 [data-theme="dark"] {
-  /* --- Superfícies (warm stone) --- */
-  --background: #0c0a09;
-  --foreground: #fafaf9;
-  --surface-0: #0c0a09;
-  --surface-1: #121212;
-  --surface-2: #181818;
-  --surface-3: #44403c;
-  --surface-hover: #57534e;
-  --border: #33302e;
-  --border-light: #44403c;
+  /* --- Superfícies (near-black, livro antigo) --- */
+  --background: #050505;
+  --foreground: #d4cabb;
+  --surface-0: #050505;
+  --surface-1: #0a0a0a;
+  --surface-2: #111111;
+  --surface-3: #1e1c1a;
+  --surface-hover: #2a2826;
+  --border: #1a1918;
+  --border-light: #252320;
 
-  /* --- Texto --- */
-  --text-primary: #fafaf9;
-  --text-secondary: #a8a29e;
-  --text-muted: #78716c;
+  /* --- Texto (pergaminho) --- */
+  --text-primary: #d4cabb;
+  --text-secondary: #8a8070;
+  --text-muted: #5a5248;
 
-  /* --- Acentos por tipo --- */
-  --accent-projeto: #3b82f6;
-  --accent-tarefa: #22c55e;
-  --accent-subtarefa: #a855f7;
+  /* --- Acentos (tinta antiga) --- */
+  --accent-projeto: #8c1c13;
+  --accent-tarefa: #6a7a4a;
+  --accent-subtarefa: #7a6a50;
 
   /* --- Prioridade --- */
-  --priority-alta: #ef4444;
-  --priority-media: #eab308;
-  --priority-baixa: #22c55e;
+  --priority-alta: #8c1c13;
+  --priority-media: #b89a6a;
+  --priority-baixa: #6a7a4a;
 
   /* --- Status --- */
-  --status-a-fazer: #78716c;
-  --status-em-andamento: #3b82f6;
-  --status-pausado: #f59e0b;
-  --status-concluido: #22c55e;
-  --status-cancelado: #ef4444;
+  --status-a-fazer: #5a5248;
+  --status-em-andamento: #8c1c13;
+  --status-pausado: #b89a6a;
+  --status-concluido: #6a7a4a;
+  --status-cancelado: #8c1c13;
 
   /* --- Kanban colunas (backgrounds) --- */
-  --col-a-fazer: #1a1816;
-  --col-em-andamento: #151b28;
-  --col-pausado: #1f1a10;
-  --col-concluido: #121e17;
+  --col-a-fazer: #0a0a09;
+  --col-em-andamento: #0e0908;
+  --col-pausado: #0e0c08;
+  --col-concluido: #090c08;
 }
 
-/* ===== Light theme ===== */
+/* ===== Light theme (pergaminho quente) ===== */
 [data-theme="light"] {
-  /* --- Superfícies (warm parchment) --- */
-  --background: #bebebe;
-  --foreground: #121212;
-  --surface-0: #fafaf9;
-  --surface-1: #ffffff;
-  --surface-2: #f5f5f4;
-  --surface-3: #e7e5e4;
-  --surface-hover: #d6d3d1;
-  --border: #d6d3d1;
-  --border-light: #e7e5e4;
+  --background: #e8e0d0;
+  --foreground: #1a1410;
+  --surface-0: #f4f0e8;
+  --surface-1: #faf6f0;
+  --surface-2: #ece6da;
+  --surface-3: #ddd4c4;
+  --surface-hover: #cec4b2;
+  --border: #cec4b2;
+  --border-light: #ddd4c4;
 
-  /* --- Texto --- */
-  --text-primary: #121212;
-  --text-secondary: #57534e;
-  --text-muted: #a8a29e;
+  --text-primary: #1a1410;
+  --text-secondary: #4a3e30;
+  --text-muted: #8a7e6e;
 
-  /* --- Acentos por tipo --- */
-  --accent-projeto: #2563eb;
-  --accent-tarefa: #16a34a;
-  --accent-subtarefa: #9333ea;
+  --accent-projeto: #7a1a12;
+  --accent-tarefa: #4a6a32;
+  --accent-subtarefa: #5c4a32;
 
-  /* --- Prioridade --- */
-  --priority-alta: #dc2626;
-  --priority-media: #ca8a04;
-  --priority-baixa: #16a34a;
+  --priority-alta: #7a1a12;
+  --priority-media: #8a7020;
+  --priority-baixa: #4a6a32;
 
-  /* --- Status --- */
-  --status-a-fazer: #78716c;
-  --status-em-andamento: #2563eb;
-  --status-pausado: #d97706;
-  --status-concluido: #16a34a;
-  --status-cancelado: #dc2626;
+  --status-a-fazer: #8a7e6e;
+  --status-em-andamento: #7a1a12;
+  --status-pausado: #8a7020;
+  --status-concluido: #4a6a32;
+  --status-cancelado: #7a1a12;
 
-  /* --- Kanban colunas (backgrounds) --- */
-  --col-a-fazer: #f5f5f4;
-  --col-em-andamento: #eff6ff;
-  --col-pausado: #fffbeb;
-  --col-concluido: #f0fdf4;
+  --col-a-fazer: #f0ebe2;
+  --col-em-andamento: #f0e8e4;
+  --col-pausado: #f0ece0;
+  --col-concluido: #eaf0e4;
 }
