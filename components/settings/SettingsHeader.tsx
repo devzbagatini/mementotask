@@ -2,6 +2,7 @@
 
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { useSettings } from '@/lib/settings-context';
+import { LatinTooltip } from './LatinTooltip';
 
 interface SettingsHeaderProps {
   onBack: () => void;
@@ -22,9 +23,7 @@ export function SettingsHeader({ onBack }: SettingsHeaderProps) {
         </button>
         <div>
           <h2 className="text-xl font-bold text-text-primary font-heading">Configuracoes</h2>
-          <p className="text-xs text-text-muted italic font-heading">
-            &ldquo;Nosce te ipsum&rdquo;
-          </p>
+          <LatinTooltip latin="Nosce te ipsum" translation="Conhece-te a ti mesmo" />
         </div>
       </div>
 

@@ -1,6 +1,15 @@
 'use client';
 
+import { Info } from 'lucide-react';
 import type { Preset } from '@/lib/settings';
+
+const MOTTO_TRANSLATIONS: Record<string, string> = {
+  'Respice post te, hominem te esse memento': 'Olhe para tras, lembre-se de que voce e humano',
+  'Sustine et abstine': 'Suporte e abstenha-se',
+  'Lux in tenebris lucet': 'A luz brilha nas trevas',
+  'Per aspera ad astra': 'Atraves das dificuldades, ate as estrelas',
+  'Ars longa, vita brevis': 'A arte e longa, a vida e breve',
+};
 
 interface PresetCardProps {
   preset: Preset;
@@ -9,6 +18,8 @@ interface PresetCardProps {
 }
 
 export function PresetCard({ preset, isActive, onSelect }: PresetCardProps) {
+  const translation = MOTTO_TRANSLATIONS[preset.motto];
+
   return (
     <button
       onClick={() => onSelect(preset.id)}
@@ -27,9 +38,19 @@ export function PresetCard({ preset, isActive, onSelect }: PresetCardProps) {
         )}
       </div>
 
-      <p className="text-xs text-text-muted italic mb-3 font-heading">
-        &ldquo;{preset.motto}&rdquo;
-      </p>
+      <div className="flex items-center gap-1 mb-3">
+        <p className="text-xs text-text-muted italic font-heading">
+          &ldquo;{preset.motto}&rdquo;
+        </p>
+        {translation && (
+          <span className="relative group flex-shrink-0">
+            <Info className="h-3 w-3 text-text-muted/60 cursor-help" />
+            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 rounded-lg bg-surface-3 border border-border text-[11px] text-text-primary whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+              {translation}
+            </span>
+          </span>
+        )}
+      </div>
 
       {/* Dual color strips — dark & light */}
       <div className="space-y-1">
