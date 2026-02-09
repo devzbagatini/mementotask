@@ -7,21 +7,21 @@
 /* ===== Dark theme (padrão — Memento Mori) ===== */
 :root,
 [data-theme="dark"] {
-  /* --- Superfícies (near-black, livro antigo) --- */
-  --background: #050505;
+  /* --- Superfícies (livro antigo, dark quente) --- */
+  --background: #0e0d0b;
   --foreground: #d4cabb;
-  --surface-0: #050505;
-  --surface-1: #0a0a0a;
-  --surface-2: #111111;
-  --surface-3: #1e1c1a;
-  --surface-hover: #2a2826;
-  --border: #1a1918;
-  --border-light: #252320;
+  --surface-0: #0e0d0b;
+  --surface-1: #161412;
+  --surface-2: #1e1c18;
+  --surface-3: #2a2620;
+  --surface-hover: #36322a;
+  --border: #252218;
+  --border-light: #302c24;
 
   /* --- Texto (pergaminho) --- */
   --text-primary: #d4cabb;
-  --text-secondary: #8a8070;
-  --text-muted: #5a5248;
+  --text-secondary: #9a9080;
+  --text-muted: #6a6258;
 
   /* --- Acentos (tinta antiga) --- */
   --accent-projeto: #8c1c13;
@@ -34,17 +34,17 @@
   --priority-baixa: #6a7a4a;
 
   /* --- Status --- */
-  --status-a-fazer: #5a5248;
+  --status-a-fazer: #6a6258;
   --status-em-andamento: #8c1c13;
   --status-pausado: #b89a6a;
   --status-concluido: #6a7a4a;
   --status-cancelado: #8c1c13;
 
   /* --- Kanban colunas (backgrounds) --- */
-  --col-a-fazer: #0a0a09;
-  --col-em-andamento: #0e0908;
-  --col-pausado: #0e0c08;
-  --col-concluido: #090c08;
+  --col-a-fazer: #12110e;
+  --col-em-andamento: #14100e;
+  --col-pausado: #14120e;
+  --col-concluido: #10140e;
 }
 
 /* ===== Light theme (pergaminho quente) ===== */
