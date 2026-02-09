@@ -5,43 +5,25 @@ import { supabase } from './supabase';
 export async function loadWorkspaces(userId: string): Promise<WorkspaceWithRole[]> {
   if (!supabase) throw new Error('Supabase not configured');
 
-  // Carregar workspaces onde o usuário é dono
+  // Simplificado: apenas workspaces do dono (evita recursão RLS)
   const { data: ownedWorkspaces, error: ownedError } = await supabase
     .from('workspaces')
-    .select('*')
-    .eq('owner_id', userId);
+    .select('*');
 
   if (ownedError) throw ownedError;
 
-  // Carregar workspaces onde o usuário é membro
-  const { data: memberData, error: memberError } = await supabase
-    .from('workspace_members')
-    .select('workspace_id, role, workspaces(id, nome, descricao, owner_id, criado_em, atualizado_em)')
-    .eq('user_id', userId);
+  // Filtrar apenas os que o usuário é dono (RLS já faz isso, mas garantimos)
+  const userWorkspaces = ownedWorkspaces?.filter(ws => ws.owner_id === userId) || [];
 
-  if (memberError) throw memberError;
-  
-  const memberWorkspaces = memberData as any[];
-
-  // Contar membros de cada workspace
-  const workspaceIds = [
-    ...ownedWorkspaces.map(w => w.id),
-    ...memberWorkspaces.map(m => m.workspace_id)
-  ];
-
-  const { data: memberCounts, error: countError } = await supabase
-    .from('workspace_members')
-    .select('workspace_id', { count: 'exact' })
-    .in('workspace_id', workspaceIds);
-
-  if (countError) throw countError;
-
-  // Combinar resultados
+  // Contar membros
   const workspaces: WorkspaceWithRole[] = [];
-
-  // Workspaces próprios
-  for (const ws of ownedWorkspaces) {
-    const memberCount = memberCounts?.filter(m => m.workspace_id === ws.id).length || 0;
+  
+  for (const ws of userWorkspaces) {
+    const { count } = await supabase
+      .from('workspace_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('workspace_id', ws.id);
+      
     workspaces.push({
       id: ws.id,
       nome: ws.nome,
@@ -50,24 +32,7 @@ export async function loadWorkspaces(userId: string): Promise<WorkspaceWithRole[
       criadoEm: ws.criado_em,
       atualizadoEm: ws.atualizado_em,
       role: 'owner',
-      memberCount: memberCount + 1, // +1 para o dono
-    });
-  }
-
-  // Workspaces como membro
-  for (const member of memberWorkspaces) {
-    if (member.workspaces.owner_id === userId) continue; // Já adicionado acima
-    
-    const memberCount = memberCounts?.filter(m => m.workspace_id === member.workspace_id).length || 0;
-    workspaces.push({
-      id: member.workspaces.id,
-      nome: member.workspaces.nome,
-      descricao: member.workspaces.descricao,
-      ownerId: member.workspaces.owner_id,
-      criadoEm: member.workspaces.criado_em,
-      atualizadoEm: member.workspaces.atualizado_em,
-      role: member.role,
-      memberCount: memberCount + 1,
+      memberCount: (count || 0) + 1,
     });
   }
 
