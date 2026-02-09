@@ -225,13 +225,17 @@ export async function loadWorkspaceMembers(workspaceId: string): Promise<Workspa
 export async function loadItemsByWorkspace(workspaceId: string | null, userId: string): Promise<Item[]> {
   if (!supabase) throw new Error('Supabase not configured');
 
-  // Query simplificada - RLS cuida da segurança filtrando por user_id
+  // Query simplificada - apenas itens do usuário (RLS filtra)
   const { data, error } = await supabase
     .from('items')
     .select('*')
+    .eq('user_id', userId)
     .order('criado_em', { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error loading items:', error);
+    throw error;
+  }
   return data.map(row => ({
     id: row.id,
     nome: row.nome,
