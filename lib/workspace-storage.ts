@@ -5,15 +5,24 @@ import { supabase } from './supabase';
 export async function loadWorkspaces(userId: string): Promise<WorkspaceWithRole[]> {
   if (!supabase) throw new Error('Supabase not configured');
 
+  console.log('🔍 Carregando workspaces para userId:', userId);
+
   // Simplificado: apenas workspaces do dono (evita recursão RLS)
   const { data: ownedWorkspaces, error: ownedError } = await supabase
     .from('workspaces')
     .select('*');
 
-  if (ownedError) throw ownedError;
+  if (ownedError) {
+    console.error('❌ Erro ao carregar workspaces:', ownedError);
+    throw ownedError;
+  }
+
+  console.log('📊 Workspaces retornados:', ownedWorkspaces?.length || 0);
 
   // Filtrar apenas os que o usuário é dono (RLS já faz isso, mas garantimos)
   const userWorkspaces = ownedWorkspaces?.filter(ws => ws.owner_id === userId) || [];
+  
+  console.log('👤 Workspaces do usuário:', userWorkspaces.length);
 
   // Contar membros
   const workspaces: WorkspaceWithRole[] = [];
@@ -42,6 +51,8 @@ export async function loadWorkspaces(userId: string): Promise<WorkspaceWithRole[
 export async function createWorkspace(userId: string, nome: string, descricao?: string): Promise<Workspace> {
   if (!supabase) throw new Error('Supabase not configured');
 
+  console.log('📝 Criando workspace:', { userId, nome, descricao });
+
   const { data, error } = await supabase
     .from('workspaces')
     .insert({
@@ -52,7 +63,12 @@ export async function createWorkspace(userId: string, nome: string, descricao?: 
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Erro ao criar workspace:', error);
+    throw error;
+  }
+
+  console.log('✅ Workspace criado:', data);
 
   return {
     id: data.id,
