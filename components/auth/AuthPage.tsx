@@ -11,6 +11,7 @@ export function AuthPage() {
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -25,6 +26,11 @@ export function AuthPage() {
         const { error } = await signIn(email, password);
         if (error) setError(error.message);
       } else {
+        if (password !== confirmPassword) {
+          setError('As senhas não coincidem.');
+          setSubmitting(false);
+          return;
+        }
         const { error } = await signUp(email, password, name);
         if (error) {
           setError(error.message);
@@ -108,6 +114,24 @@ export function AuthPage() {
                 placeholder="••••••••"
               />
             </div>
+
+            {mode === 'signup' && (
+              <div>
+                <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-text-secondary">
+                  Confirmar Senha
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-text-primary placeholder:text-text-muted focus:border-accent-projeto focus:outline-none focus:ring-1 focus:ring-accent-projeto"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
 
             {error && (
               <div className="rounded-md bg-red-900/20 p-3 text-sm text-red-400">
