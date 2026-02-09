@@ -96,8 +96,10 @@ export function WorkspaceSwitcher() {
             <div className="border-t border-border p-2">
               <button
                 onClick={() => {
+                  console.log('🖱️ Click em "Criar novo workspace"');
                   setIsOpen(false);
                   setShowCreate(true);
+                  console.log('📋 showCreate definido como true');
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-2 transition-colors text-sm text-text-secondary"
               >
@@ -110,6 +112,7 @@ export function WorkspaceSwitcher() {
       </div>
 
       {/* Create Workspace Modal */}
+      {console.log('🎨 Renderizando - showCreate:', showCreate)}
       <Modal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
