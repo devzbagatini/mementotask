@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useWorkspace } from '@/lib/workspace-context';
-import { Users, X, Mail, Shield, UserMinus } from 'lucide-react';
+import { Users, X, Mail, Shield, UserMinus, Trash2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { cn } from '@/lib/utils';
 
 const ROLE_OPTIONS = [
@@ -13,11 +14,13 @@ const ROLE_OPTIONS = [
 ];
 
 export function WorkspaceShare() {
-  const { currentWorkspace, members, inviteToWorkspace, removeFromWorkspace, changeMemberRole } = useWorkspace();
+  const { currentWorkspace, members, inviteToWorkspace, removeFromWorkspace, changeMemberRole, deleteCurrentWorkspace } = useWorkspace();
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<'admin' | 'editor' | 'viewer'>('editor');
   const [isInviting, setIsInviting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!currentWorkspace || currentWorkspace.role === 'viewer') return null;
 
@@ -170,8 +173,42 @@ export function WorkspaceShare() {
             <p><strong>Editor:</strong> Cria e edita projetos</p>
             <p><strong>Visualizador:</strong> Apenas visualiza</p>
           </div>
+
+          {/* Danger Zone - only for owner */}
+          {currentWorkspace.role === 'owner' && (
+            <div className="border-t border-priority-alta/20 pt-4 space-y-3">
+              <h3 className="text-sm font-medium text-priority-alta">Zona de Perigo</h3>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isDeleting}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-priority-alta/30 text-priority-alta hover:bg-priority-alta/10 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isDeleting ? 'Excluindo...' : 'Excluir Workspace'}
+              </button>
+            </div>
+          )}
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+        title="Excluir Workspace"
+        message={`Tem certeza que deseja excluir "${currentWorkspace.nome}"? Todos os projetos e membros serão removidos. Esta ação não pode ser desfeita.`}
+        onConfirm={async () => {
+          setShowDeleteConfirm(false);
+          setIsDeleting(true);
+          try {
+            await deleteCurrentWorkspace();
+            setIsOpen(false);
+          } catch (error) {
+            // Error handled in context
+          } finally {
+            setIsDeleting(false);
+          }
+        }}
+      />
     </>
   );
 }
