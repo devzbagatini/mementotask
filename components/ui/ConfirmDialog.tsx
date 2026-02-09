@@ -17,13 +17,13 @@ export function ConfirmDialog({ isOpen, onConfirm, onCancel, title, message }: C
       <div className="flex justify-end gap-3">
         <button
           onClick={onCancel}
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+          className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={onConfirm}
-          className="rounded-lg bg-priority-alta px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+          className="rounded-xl bg-priority-alta px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
         >
           Excluir
         </button>

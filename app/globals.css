@@ -1,86 +1,5 @@
 @import "tailwindcss";
-
-/* ===== Dark theme (padrão) ===== */
-:root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-
-  /* Surfaces */
-  --surface-0: #0a0a0a;
-  --surface-1: #141414;
-  --surface-2: #1e1e1e;
-  --surface-3: #282828;
-  --surface-hover: #333333;
-  --border: #2a2a2a;
-  --border-light: #333333;
-
-  /* Text */
-  --text-primary: #ededed;
-  --text-secondary: #a0a0a0;
-  --text-muted: #666666;
-
-  /* Accent por tipo */
-  --accent-projeto: #3b82f6;
-  --accent-tarefa: #22c55e;
-  --accent-subtarefa: #a855f7;
-
-  /* Priority */
-  --priority-alta: #ef4444;
-  --priority-media: #eab308;
-  --priority-baixa: #22c55e;
-
-  /* Status / Kanban columns */
-  --status-a-fazer: #64748b;
-  --status-em-andamento: #3b82f6;
-  --status-pausado: #f59e0b;
-  --status-concluido: #22c55e;
-  --status-cancelado: #ef4444;
-
-  /* Kanban column backgrounds */
-  --col-a-fazer: #1a1c22;
-  --col-em-andamento: #141c2b;
-  --col-pausado: #1f1a10;
-  --col-concluido: #111f17;
-}
-
-/* ===== Light theme ===== */
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: #f8f9fa;
-    --foreground: #171717;
-
-    --surface-0: #f8f9fa;
-    --surface-1: #ffffff;
-    --surface-2: #f1f3f5;
-    --surface-3: #e9ecef;
-    --surface-hover: #dee2e6;
-    --border: #dee2e6;
-    --border-light: #e9ecef;
-
-    --text-primary: #171717;
-    --text-secondary: #555555;
-    --text-muted: #999999;
-
-    --accent-projeto: #2563eb;
-    --accent-tarefa: #16a34a;
-    --accent-subtarefa: #9333ea;
-
-    --priority-alta: #dc2626;
-    --priority-media: #ca8a04;
-    --priority-baixa: #16a34a;
-
-    --status-a-fazer: #64748b;
-    --status-em-andamento: #2563eb;
-    --status-pausado: #d97706;
-    --status-concluido: #16a34a;
-    --status-cancelado: #dc2626;
-
-    --col-a-fazer: #f1f3f5;
-    --col-em-andamento: #eff6ff;
-    --col-pausado: #fffbeb;
-    --col-concluido: #f0fdf4;
-  }
-}
+@import "./theme.css";
 
 @theme inline {
   --color-background: var(--background);
@@ -117,17 +36,45 @@
   --color-col-pausado: var(--col-pausado);
   --color-col-concluido: var(--col-concluido);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-body, var(--font-fira, 'Fira Code', monospace));
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-body, var(--font-fira, 'Fira Code', monospace));
 }
 
-/* Scrollbar styling for dark theme */
+/* Heading font — serifada */
+.font-heading {
+  font-family: var(--font-headings, var(--font-gentium, Georgia, 'Times New Roman', serif));
+}
+
+/* Data font — monospace para tabelas e dashboard */
+.font-data {
+  font-family: var(--font-body, var(--font-fira, 'Fira Code', monospace));
+}
+
+/* UI font — sans-serif para header e botões de sistema */
+.font-ui {
+  font-family: var(--font-interface, var(--font-geist-sans, Arial, Helvetica, sans-serif));
+}
+
+/* Subtle grain texture — parchment feel */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

@@ -46,7 +46,7 @@ export function KanbanCard({ item, dragListeners, dragAttributes, isDragging }: 
   return (
     <div
       className={cn(
-        'rounded-lg border border-border bg-surface-1 p-3 border-l-[3px] transition-colors hover:bg-surface-2',
+        'rounded-xl border border-border bg-surface-1 p-3 border-l-[3px] transition-colors hover:bg-surface-2',
         CARD_BORDER[item.tipo],
         isDragging && 'opacity-50',
       )}
@@ -71,7 +71,7 @@ export function KanbanCard({ item, dragListeners, dragAttributes, isDragging }: 
               <MoreVertical className="h-4 w-4" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-6 z-20 w-44 rounded-lg border border-border bg-surface-1 py-1 shadow-lg">
+              <div className="absolute right-0 top-6 z-20 w-44 rounded-xl border border-border bg-surface-1 py-1 shadow-lg">
                 <button
                   onClick={() => { openEditModal(item); setMenuOpen(false); }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-surface-2 hover:text-text-primary"

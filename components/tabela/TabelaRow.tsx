@@ -3,14 +3,18 @@
 import type { ReactNode } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Item, Status } from '@/lib/types';
-import { STATUSES, STATUS_LABELS } from '@/lib/types';
+import type { Item, Status, Prioridade } from '@/lib/types';
+import { STATUSES, STATUS_LABELS, PRIORIDADES, PRIORIDADE_LABELS } from '@/lib/types';
 import type { ColumnDef } from '@/lib/columns';
 import { useMementotask } from '@/lib/context';
-import { PriorityDot, TipoBadge } from '@/components/ui/Badge';
-import { PRIORIDADE_LABELS } from '@/lib/types';
+import { useToast } from '@/lib/toast';
+import { TipoBadge } from '@/components/ui/Badge';
+import { SelectPill } from '@/components/ui/SelectPill';
 import { cn, formatCurrency, formatDate, isOverdue } from '@/lib/utils';
 import { Pencil, Trash2, Plus, GripVertical, ChevronRight, ChevronDown } from 'lucide-react';
+
+const STATUS_OPTIONS = STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] }));
+const PRIORITY_OPTIONS = PRIORIDADES.map((p) => ({ value: p, label: PRIORIDADE_LABELS[p] }));
 
 const STATUS_COLORS: Record<Status, string> = {
   a_fazer: 'bg-status-a-fazer/15 text-status-a-fazer',
@@ -18,6 +22,12 @@ const STATUS_COLORS: Record<Status, string> = {
   pausado: 'bg-status-pausado/15 text-status-pausado',
   concluido: 'bg-status-concluido/15 text-status-concluido',
   cancelado: 'bg-status-cancelado/15 text-status-cancelado',
+};
+
+const PRIORITY_COLORS: Record<Prioridade, string> = {
+  alta: 'bg-priority-alta/15 text-priority-alta',
+  media: 'bg-priority-media/15 text-priority-media',
+  baixa: 'bg-priority-baixa/15 text-priority-baixa',
 };
 
 export type DropZone = 'above' | 'inside' | 'below';
@@ -44,6 +54,7 @@ export function TabelaRow({
   columns,
 }: TabelaRowProps) {
   const { openEditModal, openCreateModal, confirmDelete, editItem } = useMementotask();
+  const { addToast } = useToast();
 
   const childTipo = item.tipo === 'projeto' ? 'tarefa' : item.tipo === 'tarefa' ? 'subtarefa' : null;
 
@@ -90,31 +101,30 @@ export function TabelaRow({
       case 'status':
         return (
           <td key="status" className={tdClass} onClick={(e) => e.stopPropagation()}>
-            <select
+            <SelectPill
               value={item.status}
-              onChange={(e) => editItem(item.id, { status: e.target.value as Status })}
-              className={cn(
-                'rounded-full px-2 py-0.5 text-xs font-medium border-none outline-none cursor-pointer appearance-none pr-5 bg-no-repeat bg-[length:12px] bg-[right_4px_center]',
-                STATUS_COLORS[item.status],
-              )}
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`,
+              options={STATUS_OPTIONS}
+              colorMap={STATUS_COLORS}
+              onChange={(newStatus) => {
+                editItem(item.id, { status: newStatus });
+                addToast(`"${item.nome}" alterado para ${STATUS_LABELS[newStatus]}`);
               }}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-              ))}
-            </select>
+            />
           </td>
         );
 
       case 'prioridade':
         return (
-          <td key="prioridade" className={tdClass}>
-            <div className="flex items-center gap-1.5">
-              <PriorityDot prioridade={item.prioridade} />
-              <span className="text-xs text-text-secondary">{PRIORIDADE_LABELS[item.prioridade]}</span>
-            </div>
+          <td key="prioridade" className={tdClass} onClick={(e) => e.stopPropagation()}>
+            <SelectPill
+              value={item.prioridade}
+              options={PRIORITY_OPTIONS}
+              colorMap={PRIORITY_COLORS}
+              onChange={(newPrioridade) => {
+                editItem(item.id, { prioridade: newPrioridade });
+                addToast(`"${item.nome}" prioridade alterada para ${PRIORIDADE_LABELS[newPrioridade]}`);
+              }}
+            />
           </td>
         );
 

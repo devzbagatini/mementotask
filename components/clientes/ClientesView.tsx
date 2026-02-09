@@ -60,7 +60,7 @@ const DISPLAY_MODES: { id: ClientesDisplayMode; icon: typeof LayoutGrid; label: 
 
 function DisplayModeToggle({ mode, onChange }: { mode: ClientesDisplayMode; onChange: (m: ClientesDisplayMode) => void }) {
   return (
-    <div className="flex items-center gap-0.5 rounded-lg border border-border bg-surface-2 p-0.5">
+    <div className="flex items-center gap-0.5 rounded-xl border border-border bg-surface-2 p-0.5">
       {DISPLAY_MODES.map(({ id, icon: Icon, label }) => (
         <button
           key={id}
@@ -98,7 +98,7 @@ function ClienteCard({ data, onClick }: { data: ClienteData; onClick: () => void
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-lg border border-border bg-surface-1 p-4 hover:bg-surface-2 transition-colors"
+      className="w-full text-left rounded-xl border border-border bg-surface-1 p-4 hover:bg-surface-2 transition-colors"
     >
       <h3 className="text-base font-semibold text-text-primary mb-3">{data.nome}</h3>
 
@@ -125,7 +125,7 @@ function ClienteListItem({ data, onClick }: { data: ClienteData; onClick: () => 
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-lg border border-border bg-surface-1 px-5 py-4 hover:bg-surface-2 transition-colors"
+      className="w-full text-left rounded-xl border border-border bg-surface-1 px-5 py-4 hover:bg-surface-2 transition-colors"
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-base font-semibold text-text-primary truncate">{data.nome}</h3>
@@ -162,7 +162,7 @@ function ClienteDetalhe({ clienteNome, onBack }: { clienteNome: string; onBack: 
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
+          className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar
@@ -196,8 +196,9 @@ export function ClientesView() {
 
   if (clientesData.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface-1 p-8 text-center text-text-muted">
-        Nenhum cliente encontrado. Adicione clientes aos seus projetos.
+      <div className="rounded-xl border border-border bg-surface-1 p-8 text-center">
+        <p className="text-sm italic text-text-muted font-heading">&ldquo;Sapere aude&rdquo;</p>
+        <p className="text-xs text-text-muted mt-1">Nenhum cliente encontrado. Adicione clientes aos seus projetos.</p>
       </div>
     );
   }

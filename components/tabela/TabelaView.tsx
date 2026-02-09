@@ -391,7 +391,7 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
         onDragEnd={handleDragEnd}
         onDragCancel={() => { setActiveItem(null); setDropTarget(null); }}
       >
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-xl border border-border font-data">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-surface-2">
@@ -438,8 +438,9 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
               </SortableContext>
               {sortedItems.length === 0 && (
                 <tr>
-                  <td colSpan={colSpan} className="px-4 py-8 text-center text-text-muted">
-                    Nenhum item encontrado.
+                  <td colSpan={colSpan} className="px-4 py-8 text-center">
+                    <p className="text-sm italic text-text-muted font-heading">&ldquo;Labor omnia vincit&rdquo;</p>
+                    <p className="text-xs text-text-muted mt-1">Nenhum item encontrado.</p>
                   </td>
                 </tr>
               )}
@@ -448,7 +449,7 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
         </div>
         <DragOverlay>
           {activeItem ? (
-            <div className="rounded-lg border border-accent-projeto bg-surface-1 px-4 py-2 shadow-lg opacity-90 text-sm font-medium text-text-primary">
+            <div className="rounded-xl border border-accent-projeto bg-surface-1 px-4 py-2 shadow-lg opacity-90 text-sm font-medium text-text-primary">
               {activeItem.nome}
             </div>
           ) : null}

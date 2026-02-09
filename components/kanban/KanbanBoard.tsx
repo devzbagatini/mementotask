@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, type DragStartEvent, type DragEndEvent } from '@dnd-kit/core';
 import { useMementotask } from '@/lib/context';
-import { KANBAN_STATUSES, type KanbanStatus, type Item } from '@/lib/types';
+import { useToast } from '@/lib/toast';
+import { KANBAN_STATUSES, STATUS_LABELS, type KanbanStatus, type Item } from '@/lib/types';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 
 export function KanbanBoard() {
   const { filteredItems, editItem } = useMementotask();
+  const { addToast } = useToast();
   const [activeItem, setActiveItem] = useState<Item | null>(null);
 
   const sensors = useSensors(
@@ -34,6 +36,7 @@ export function KanbanBoard() {
 
     if (item && newStatus && item.status !== newStatus) {
       editItem(item.id, { status: newStatus });
+      addToast(`"${item.nome}" movido para ${STATUS_LABELS[newStatus]}`);
     }
   }
 

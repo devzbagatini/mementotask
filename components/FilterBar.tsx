@@ -1,69 +1,91 @@
 'use client';
 
+import { useState } from 'react';
 import { useMementotask } from '@/lib/context';
 import { STATUS_LABELS, STATUSES } from '@/lib/types';
-import { Search } from 'lucide-react';
+import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function FilterBar() {
   const { filter, setFilter, uniqueTipoProjeto, uniqueClientes } = useMementotask();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const hasActiveFilters = filter.status !== 'todos' || filter.cliente !== '' || filter.tipoProjeto !== '';
 
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-3">
-      {/* Status filter */}
-      <select
-        value={filter.status}
-        onChange={(e) => setFilter({ status: e.target.value as typeof filter.status })}
-        className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-projeto"
-      >
-        <option value="todos">Todos os Status</option>
-        {STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {STATUS_LABELS[s]}
-          </option>
-        ))}
-      </select>
-
-      {/* Cliente filter */}
-      <select
-        value={filter.cliente}
-        onChange={(e) => setFilter({ cliente: e.target.value })}
-        className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-projeto"
-      >
-        <option value="">Todos os Clientes</option>
-        {uniqueClientes.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-
-      {/* Tipo Projeto filter with datalist */}
-      <div className="relative">
-        <input
-          type="text"
-          list="tipo-projeto-list"
-          placeholder="Tipo de Projeto"
-          value={filter.tipoProjeto}
-          onChange={(e) => setFilter({ tipoProjeto: e.target.value })}
-          className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-accent-projeto w-44"
-        />
-        <datalist id="tipo-projeto-list">
-          {uniqueTipoProjeto.map((tipo) => (
-            <option key={tipo} value={tipo} />
-          ))}
-        </datalist>
+    <div className="mt-4 space-y-3">
+      {/* Search + toggle (always visible) */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+          <input
+            type="text"
+            placeholder="Buscar por nome, cliente ou descricao..."
+            value={filter.busca}
+            onChange={(e) => setFilter({ busca: e.target.value })}
+            className="w-full rounded-xl border border-border bg-surface-2 py-2 pl-9 pr-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-accent-projeto"
+          />
+        </div>
+        <button
+          onClick={() => setFiltersOpen((p) => !p)}
+          className={cn(
+            'sm:hidden rounded-xl border border-border p-2 transition-colors',
+            filtersOpen || hasActiveFilters
+              ? 'bg-accent-projeto text-white border-accent-projeto'
+              : 'bg-surface-2 text-text-muted hover:text-text-primary',
+          )}
+          title="Filtros"
+        >
+          {filtersOpen ? <X className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
+        </button>
       </div>
 
-      {/* Search */}
-      <div className="relative flex-1 min-w-[200px]">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
-        <input
-          type="text"
-          placeholder="Buscar por nome, cliente ou descrição..."
-          value={filter.busca}
-          onChange={(e) => setFilter({ busca: e.target.value })}
-          className="w-full rounded-lg border border-border bg-surface-2 py-2 pl-9 pr-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-accent-projeto"
-        />
+      {/* Filter selects (always visible on sm+, togglable on mobile) */}
+      <div className={cn(
+        'flex flex-wrap items-center gap-3',
+        filtersOpen ? 'flex' : 'hidden sm:flex',
+      )}>
+        <select
+          value={filter.status}
+          onChange={(e) => setFilter({ status: e.target.value as typeof filter.status })}
+          className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-projeto"
+        >
+          <option value="todos">Todos os Status</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s]}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={filter.cliente}
+          onChange={(e) => setFilter({ cliente: e.target.value })}
+          className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary outline-none focus:border-accent-projeto"
+        >
+          <option value="">Todos os Clientes</option>
+          {uniqueClientes.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+
+        <div className="relative">
+          <input
+            type="text"
+            list="tipo-projeto-list"
+            placeholder="Tipo de Projeto"
+            value={filter.tipoProjeto}
+            onChange={(e) => setFilter({ tipoProjeto: e.target.value })}
+            className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-accent-projeto w-44"
+          />
+          <datalist id="tipo-projeto-list">
+            {uniqueTipoProjeto.map((tipo) => (
+              <option key={tipo} value={tipo} />
+            ))}
+          </datalist>
+        </div>
       </div>
     </div>
   );

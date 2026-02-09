@@ -143,7 +143,7 @@ export function ColumnSettings({ visibleColumns, onChange, forcedHiddenKeys = []
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+          'flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors',
           isOpen
             ? 'bg-surface-2 text-text-primary'
             : 'text-text-muted hover:text-text-secondary hover:bg-surface-2',
@@ -158,7 +158,7 @@ export function ColumnSettings({ visibleColumns, onChange, forcedHiddenKeys = []
         <>
           <div className="fixed inset-0 z-30" onClick={() => setIsOpen(false)} />
 
-          <div className="absolute right-0 top-full mt-1 z-40 w-64 rounded-lg border border-border bg-surface-1 shadow-lg">
+          <div className="absolute right-0 top-full mt-1 z-40 w-64 rounded-xl border border-border bg-surface-1 shadow-lg">
             <div className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-text-primary">Colunas Visíveis</h3>

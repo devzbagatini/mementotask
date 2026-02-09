@@ -81,7 +81,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-lg border border-border bg-surface-1 shadow-xl"
+        className="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-surface-1 shadow-xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">

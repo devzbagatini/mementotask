@@ -93,7 +93,7 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
     }
   }
 
-  const inputClass = 'w-full rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-projeto';
+  const inputClass = 'w-full rounded-xl border border-border bg-surface-2 px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent-projeto';
   const labelClass = 'block text-sm font-medium text-text-secondary mb-1';
   const errorClass = 'text-xs text-priority-alta mt-1';
 
@@ -227,13 +227,13 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 transition-colors"
+          className="rounded-xl border border-border px-4 py-2 text-sm font-medium text-text-secondary hover:bg-surface-2 transition-colors"
         >
           Cancelar
         </button>
         <button
           type="submit"
-          className="rounded-lg bg-accent-projeto px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+          className="rounded-xl bg-accent-projeto px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
         >
           {isEdit ? 'Salvar' : 'Criar'}
         </button>

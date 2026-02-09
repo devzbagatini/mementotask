@@ -1,0 +1,90 @@
+/* ============================================
+   MEMENTOTASK — TEMA
+   "Memento Mori" — Tons quentes, erudito, moderno.
+   Edite as variáveis abaixo para customizar o visual.
+   ============================================ */
+
+/* ===== Dark theme (padrão) ===== */
+:root,
+[data-theme="dark"] {
+  /* --- Superfícies (warm stone) --- */
+  --background: #0c0a09;
+  --foreground: #fafaf9;
+  --surface-0: #0c0a09;
+  --surface-1: #121212;
+  --surface-2: #181818;
+  --surface-3: #44403c;
+  --surface-hover: #57534e;
+  --border: #33302e;
+  --border-light: #44403c;
+
+  /* --- Texto --- */
+  --text-primary: #fafaf9;
+  --text-secondary: #a8a29e;
+  --text-muted: #78716c;
+
+  /* --- Acentos por tipo --- */
+  --accent-projeto: #3b82f6;
+  --accent-tarefa: #22c55e;
+  --accent-subtarefa: #a855f7;
+
+  /* --- Prioridade --- */
+  --priority-alta: #ef4444;
+  --priority-media: #eab308;
+  --priority-baixa: #22c55e;
+
+  /* --- Status --- */
+  --status-a-fazer: #78716c;
+  --status-em-andamento: #3b82f6;
+  --status-pausado: #f59e0b;
+  --status-concluido: #22c55e;
+  --status-cancelado: #ef4444;
+
+  /* --- Kanban colunas (backgrounds) --- */
+  --col-a-fazer: #1a1816;
+  --col-em-andamento: #151b28;
+  --col-pausado: #1f1a10;
+  --col-concluido: #121e17;
+}
+
+/* ===== Light theme ===== */
+[data-theme="light"] {
+  /* --- Superfícies (warm parchment) --- */
+  --background: #bebebe;
+  --foreground: #121212;
+  --surface-0: #fafaf9;
+  --surface-1: #ffffff;
+  --surface-2: #f5f5f4;
+  --surface-3: #e7e5e4;
+  --surface-hover: #d6d3d1;
+  --border: #d6d3d1;
+  --border-light: #e7e5e4;
+
+  /* --- Texto --- */
+  --text-primary: #121212;
+  --text-secondary: #57534e;
+  --text-muted: #a8a29e;
+
+  /* --- Acentos por tipo --- */
+  --accent-projeto: #2563eb;
+  --accent-tarefa: #16a34a;
+  --accent-subtarefa: #9333ea;
+
+  /* --- Prioridade --- */
+  --priority-alta: #dc2626;
+  --priority-media: #ca8a04;
+  --priority-baixa: #16a34a;
+
+  /* --- Status --- */
+  --status-a-fazer: #78716c;
+  --status-em-andamento: #2563eb;
+  --status-pausado: #d97706;
+  --status-concluido: #16a34a;
+  --status-cancelado: #dc2626;
+
+  /* --- Kanban colunas (backgrounds) --- */
+  --col-a-fazer: #f5f5f4;
+  --col-em-andamento: #eff6ff;
+  --col-pausado: #fffbeb;
+  --col-concluido: #f0fdf4;
+}

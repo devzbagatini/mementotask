@@ -38,7 +38,7 @@ export function KanbanColumn({ status, items }: KanbanColumnProps) {
     <div
       ref={setNodeRef}
       className={cn(
-        'rounded-lg p-3 transition-colors',
+        'rounded-xl p-3 transition-colors',
         COL_BG[status],
         isOver && 'ring-2 ring-accent-projeto/50',
       )}
@@ -64,7 +64,7 @@ export function KanbanColumn({ status, items }: KanbanColumnProps) {
           <DraggableCard key={item.id} item={item} />
         ))}
         {items.length === 0 && (
-          <p className="py-4 text-center text-xs text-text-muted">Nenhum item</p>
+          <p className="py-4 text-center text-xs text-text-muted">Nihil hic — nenhum item</p>
         )}
       </div>
     </div>
