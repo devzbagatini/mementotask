@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/lib/theme';
 import { SettingsProvider } from '@/lib/settings-context';
 import { ToastProvider } from '@/lib/toast';
 import { useToast } from '@/lib/toast';
+import { BookOpen } from 'lucide-react';
 import { Header } from './Header';
 import { TabNav } from './TabNav';
 import { FilterBar } from './FilterBar';
@@ -18,11 +19,15 @@ import { ItemFormModal } from './forms/ItemFormModal';
 import { ConfirmDialog } from './ui/ConfirmDialog';
 import { ToastContainer } from './ui/Toast';
 import { SettingsView } from './settings/SettingsView';
+import { LiberView } from './liber/LiberView';
+import { DateTimeClock } from './DateTimeClock';
+import { PomodoroTimer } from './PomodoroTimer';
 
 function AppContent() {
   const { view, confirmState, cancelDelete, executeDelete, getChildrenOf } = useMementotask();
   const { addToast } = useToast();
   const [showSettings, setShowSettings] = useState(false);
+  const [showLiber, setShowLiber] = useState(false);
 
   const childCount = confirmState.itemId ? getChildrenOf(confirmState.itemId).length : 0;
   const confirmMessage = childCount > 0
@@ -45,13 +50,39 @@ function AppContent() {
     );
   }
 
+  if (showLiber) {
+    return (
+      <div className="min-h-screen bg-surface-0">
+        <Header onOpenSettings={() => { setShowLiber(false); setShowSettings(true); }} />
+        <LiberView onBack={() => setShowLiber(false)} />
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  const tabRightContent = (
+    <>
+      <button
+        onClick={() => setShowLiber(true)}
+        className="rounded-lg p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+        title="Liber — Ditados & Playlists"
+      >
+        <BookOpen className="h-5 w-5" />
+      </button>
+      <PomodoroTimer />
+      <DateTimeClock />
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-surface-0">
       <Header onOpenSettings={() => setShowSettings(true)} />
       <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6">
-        <TabNav />
-        <FilterBar />
         <DashboardPanel />
+        <div className="mt-6">
+          <TabNav rightContent={tabRightContent} />
+        </div>
+        <FilterBar />
         <main className="mt-4">
           {view === 'kanban' && <KanbanBoard />}
           {view === 'tabela' && <TabelaView />}

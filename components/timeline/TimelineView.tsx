@@ -200,7 +200,7 @@ export function TimelineView() {
 
                     return (
                       <div key={item.id} className="flex items-center border-b border-border/50">
-                        <div className="w-40 shrink-0 px-3 py-1 truncate text-xs text-text-secondary border-r border-border">
+                        <div className="w-44 shrink-0 px-3 py-2 truncate text-xs text-text-secondary border-r border-border">
                           {item.nome}
                         </div>
                         <div className="flex-1 relative">

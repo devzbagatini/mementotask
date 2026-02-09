@@ -5,6 +5,7 @@ export type ColumnKey =
   | 'status'
   | 'prioridade'
   | 'prazo'
+  | 'horas'
   | 'valor'
   | 'valorRecebido'
   | 'tipoProjeto'
@@ -27,6 +28,7 @@ export const COLUMN_DEFS: Record<ColumnKey, { label: string; className?: string 
   status: { label: 'Status' },
   prioridade: { label: 'Prioridade', className: 'hidden md:table-cell' },
   prazo: { label: 'Prazo', className: 'hidden md:table-cell' },
+  horas: { label: 'Horas', className: 'hidden md:table-cell' },
   valor: { label: 'Valor', className: 'hidden lg:table-cell' },
   valorRecebido: { label: 'Valor Recebido', className: 'hidden lg:table-cell' },
   tipoProjeto: { label: 'Tipo Projeto', className: 'hidden lg:table-cell' },
@@ -38,13 +40,13 @@ export const COLUMN_DEFS: Record<ColumnKey, { label: string; className?: string 
 };
 
 export const ALL_COLUMN_KEYS: ColumnKey[] = [
-  'nome', 'cliente', 'tipo', 'status', 'prioridade', 'prazo', 'valor',
+  'nome', 'cliente', 'tipo', 'status', 'prioridade', 'prazo', 'horas', 'valor',
   'valorRecebido', 'tipoProjeto', 'dataInicio', 'dataEntrega', 'responsavel',
   'criadoEm', 'atualizadoEm',
 ];
 
 export const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [
-  'nome', 'cliente', 'tipo', 'status', 'prioridade', 'prazo', 'valor',
+  'nome', 'cliente', 'tipo', 'status', 'prioridade', 'prazo', 'horas', 'valor',
 ];
 
 const STORAGE_KEY = 'mementotask_columns';

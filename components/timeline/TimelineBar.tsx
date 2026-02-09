@@ -24,10 +24,10 @@ export function TimelineBar({ item, leftPct, widthPct, progress, onClick }: Time
   const overdue = isOverdue(item.prazo) && item.status !== 'concluido';
 
   return (
-    <div className="relative h-7 flex items-center" style={{ minWidth: 0 }}>
+    <div className="relative h-10 flex items-center" style={{ minWidth: 0 }}>
       <div
         className={cn(
-          'absolute h-5 rounded-sm cursor-pointer transition-opacity hover:opacity-90',
+          'absolute h-7 rounded-md cursor-pointer transition-opacity hover:opacity-90',
           overdue ? 'bg-priority-alta/80' : TYPE_COLORS[item.tipo],
         )}
         style={{ left: `${leftPct}%`, width: `${Math.max(widthPct, 0.5)}%` }}
@@ -38,13 +38,13 @@ export function TimelineBar({ item, leftPct, widthPct, progress, onClick }: Time
         {/* Progress bar inside */}
         {progress !== undefined && progress > 0 && (
           <div
-            className="absolute inset-y-0 left-0 rounded-sm bg-white/20"
+            className="absolute inset-y-0 left-0 rounded-md bg-white/20"
             style={{ width: `${progress}%` }}
           />
         )}
         {/* Label inside bar */}
         {widthPct > 8 && (
-          <span className="absolute inset-0 flex items-center px-1.5 text-[10px] text-white font-medium truncate">
+          <span className="absolute inset-0 flex items-center px-2 text-xs text-white font-medium truncate">
             {item.nome}
           </span>
         )}

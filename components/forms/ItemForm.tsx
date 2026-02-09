@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useMemo, type FormEvent } from 'react';
 import type { Item, ItemCreate, Tipo, Status, Prioridade } from '@/lib/types';
 import { STATUSES, STATUS_LABELS, PRIORIDADES, PRIORIDADE_LABELS } from '@/lib/types';
 import { useMementotask } from '@/lib/context';
+import { Briefcase, ListTodo, User } from 'lucide-react';
 
 interface ItemFormProps {
   tipo: Tipo;
@@ -15,13 +16,15 @@ interface ItemFormProps {
 
 export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormProps) {
   const isEdit = !!item;
-  const { items, uniqueTipoProjeto } = useMementotask();
+  const { items } = useMementotask();
+  const uniqueTipoProjeto = [...new Set(items.filter(i => i.tipoProjeto).map(i => i.tipoProjeto!))];
 
   // Form state
   const [nome, setNome] = useState(item?.nome ?? '');
   const [status, setStatus] = useState<Status>(item?.status ?? 'a_fazer');
   const [prioridade, setPrioridade] = useState<Prioridade>(item?.prioridade ?? 'media');
   const [prazo, setPrazo] = useState(item?.prazo ? item.prazo.slice(0, 10) : '');
+  const [horas, setHoras] = useState(item?.horas?.toString() ?? '');
   const [descricao, setDescricao] = useState(item?.descricao ?? '');
   const [responsavel, setResponsavel] = useState(item?.responsavel ?? '');
   const [notas, setNotas] = useState(item?.notas ?? '');
@@ -37,6 +40,28 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
   const [selectedParentId, setSelectedParentId] = useState<string>(parentId ?? '');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Build ancestry info (for tarefa/subtarefa context display)
+  const ancestry = useMemo(() => {
+    const resolvedParentId = item?.parentId ?? parentId ?? selectedParentId;
+    if (!resolvedParentId) return null;
+
+    const chain: Item[] = [];
+    let current = items.find((i) => i.id === resolvedParentId);
+    while (current) {
+      chain.unshift(current);
+      current = current.parentId ? items.find((i) => i.id === current!.parentId) : undefined;
+    }
+
+    const projeto = chain.find((i) => i.tipo === 'projeto');
+    const tarefa = chain.find((i) => i.tipo === 'tarefa');
+
+    return {
+      projeto: projeto?.nome,
+      cliente: projeto?.cliente,
+      tarefa: tarefa?.nome,
+    };
+  }, [items, item?.parentId, parentId, selectedParentId]);
 
   // Get valid parent options
   const parentOptions = tipo === 'tarefa'
@@ -66,6 +91,7 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
       status,
       prioridade,
       prazo: prazo || undefined,
+      horas: horas ? Number(horas) : undefined,
       descricao: descricao.trim() || undefined,
       responsavel: responsavel.trim() || undefined,
       notas: notas.trim() || undefined,
@@ -99,6 +125,33 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* Ancestry context */}
+      {ancestry && (ancestry.projeto || ancestry.tarefa) && (
+        <div className="rounded-xl bg-surface-2 border border-border px-4 py-3 space-y-1.5">
+          {ancestry.projeto && (
+            <div className="flex items-center gap-2 text-sm">
+              <Briefcase className="h-4 w-4 text-accent-projeto shrink-0" />
+              <span className="text-text-muted">Projeto:</span>
+              <span className="text-text-primary font-medium">{ancestry.projeto}</span>
+            </div>
+          )}
+          {ancestry.cliente && (
+            <div className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4 text-text-muted shrink-0" />
+              <span className="text-text-muted">Cliente:</span>
+              <span className="text-text-primary font-medium">{ancestry.cliente}</span>
+            </div>
+          )}
+          {ancestry.tarefa && tipo === 'subtarefa' && (
+            <div className="flex items-center gap-2 text-sm">
+              <ListTodo className="h-4 w-4 text-accent-tarefa shrink-0" />
+              <span className="text-text-muted">Tarefa:</span>
+              <span className="text-text-primary font-medium">{ancestry.tarefa}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Nome */}
       <div>
         <label className={labelClass}>Nome *</label>
@@ -153,10 +206,22 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
         </div>
       </div>
 
-      {/* Prazo */}
-      <div>
-        <label className={labelClass}>Prazo</label>
-        <input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className={inputClass} />
+      {/* Prazo + Horas */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelClass}>Prazo</label>
+          <input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className={inputClass} />
+          {prazo && (() => {
+            const diff = Math.ceil((new Date(prazo + 'T00:00:00').getTime() - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
+            if (diff < 0) return <p className="text-xs text-priority-alta font-medium mt-1">{Math.abs(diff)} dia(s) atrasado</p>;
+            if (diff === 0) return <p className="text-xs text-status-pausado font-medium mt-1">Vence hoje</p>;
+            return <p className="text-xs text-text-muted mt-1">{diff} dia(s) restante(s)</p>;
+          })()}
+        </div>
+        <div>
+          <label className={labelClass}>Horas estimadas</label>
+          <input type="number" min="0" step="0.5" value={horas} onChange={(e) => setHoras(e.target.value)} className={inputClass} placeholder="0" />
+        </div>
       </div>
 
       {/* Responsável */}

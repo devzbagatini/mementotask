@@ -99,7 +99,11 @@ function SortableTab({
   );
 }
 
-export function TabNav() {
+interface TabNavProps {
+  rightContent?: React.ReactNode;
+}
+
+export function TabNav({ rightContent }: TabNavProps) {
   const { view, setView } = useMementotask();
   const [tabOrder, setTabOrder] = useState<ViewType[]>(DEFAULT_TAB_ORDER);
 
@@ -127,23 +131,30 @@ export function TabNav() {
   }, []);
 
   return (
-    <nav className="flex gap-1 border-b border-border">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={tabOrder} strategy={horizontalListSortingStrategy}>
-          {tabOrder.map((id) => (
-            <SortableTab
-              key={id}
-              tab={TABS_MAP[id]}
-              isActive={view === id}
-              onClick={() => setView(id)}
-            />
-          ))}
-        </SortableContext>
-      </DndContext>
+    <nav className="flex items-center border-b border-border">
+      <div className="flex gap-1 flex-1 min-w-0">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={tabOrder} strategy={horizontalListSortingStrategy}>
+            {tabOrder.map((id) => (
+              <SortableTab
+                key={id}
+                tab={TABS_MAP[id]}
+                isActive={view === id}
+                onClick={() => setView(id)}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+      </div>
+      {rightContent && (
+        <div className="flex items-center gap-2 pl-2">
+          {rightContent}
+        </div>
+      )}
     </nav>
   );
 }

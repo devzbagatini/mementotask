@@ -38,9 +38,11 @@ export const initialState: AppState = {
   items: [],
   filter: {
     status: 'todos',
-    tipoProjeto: '',
+    prioridade: 'todas',
+    projeto: '',
     cliente: '',
     tarefa: '',
+    responsavel: '',
     busca: '',
   },
   view: 'kanban',

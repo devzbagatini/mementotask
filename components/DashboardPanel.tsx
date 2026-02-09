@@ -1,13 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { BarChart3, ChevronDown, ChevronUp, Briefcase, CheckSquare, DollarSign, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { BarChart3, ChevronDown, ChevronUp, Briefcase, CheckSquare, DollarSign, AlertTriangle, Calendar } from 'lucide-react';
 import { useDashboardStats } from '@/lib/hooks/useDashboardStats';
 import { useMementotask } from '@/lib/context';
 import { formatCurrency, cn } from '@/lib/utils';
 import { TIPO_LABELS } from '@/lib/types';
+import { FilterSelect } from './ui/FilterSelect';
 
 const STORAGE_KEY = 'mementotask_dashboard_open';
+const MONTH_KEY = 'mementotask_dashboard_month';
+
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+function getMonthOptions(): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = [
+    { value: 'geral', label: 'Geral' },
+  ];
+
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`;
+    options.push({ value: key, label });
+  }
+
+  return options;
+}
 
 function StatCard({ icon: Icon, label, value, subValue, color }: {
   icon: typeof Briefcase;
@@ -41,12 +64,17 @@ function ProgressBar({ value, className }: { value: number; className?: string }
 
 export function DashboardPanel() {
   const [isOpen, setIsOpen] = useState(false);
-  const stats = useDashboardStats();
+  const [monthKey, setMonthKey] = useState('geral');
+  const stats = useDashboardStats(monthKey);
   const { openEditModal } = useMementotask();
+
+  const monthOptions = useMemo(() => getMonthOptions(), []);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === 'true') setIsOpen(true);
+    const savedMonth = localStorage.getItem(MONTH_KEY);
+    if (savedMonth) setMonthKey(savedMonth);
   }, []);
 
   function toggle() {
@@ -56,16 +84,37 @@ export function DashboardPanel() {
     });
   }
 
+  function handleMonthChange(value: string) {
+    setMonthKey(value);
+    localStorage.setItem(MONTH_KEY, value);
+  }
+
   return (
-    <div className="mt-4">
-      <button
-        onClick={toggle}
-        className="flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
-      >
-        <BarChart3 className="h-4 w-4" />
-        Resumo
-        {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-      </button>
+    <div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggle}
+            className="flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary transition-colors"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Resumo
+            {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+
+          {isOpen && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-3.5 w-3.5 text-text-muted" />
+              <FilterSelect
+                value={monthKey}
+                options={monthOptions}
+                onChange={handleMonthChange}
+                placeholder="Geral"
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
       {isOpen && (
         <div className="mt-2 rounded-xl border border-border bg-surface-1 p-4 space-y-4 font-data text-sm">

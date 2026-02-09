@@ -128,20 +128,44 @@ export function TabelaRow({
           </td>
         );
 
-      case 'prazo':
+      case 'prazo': {
+        let daysLabel: { text: string; className: string } | null = null;
+        if (item.prazo && item.status !== 'concluido' && item.status !== 'cancelado') {
+          const diff = Math.ceil((new Date(item.prazo + 'T00:00:00').getTime() - new Date().setHours(0,0,0,0)) / 86400000);
+          if (diff < 0) daysLabel = { text: `${Math.abs(diff)}d atrasado`, className: 'text-priority-alta' };
+          else if (diff === 0) daysLabel = { text: 'Hoje', className: 'text-status-pausado' };
+          else daysLabel = { text: `${diff}d restante${diff > 1 ? 's' : ''}`, className: 'text-text-muted' };
+        }
         return (
           <td key="prazo" className={tdClass}>
             {item.prazo ? (
-              <span
-                className={cn(
-                  'text-xs',
-                  isOverdue(item.prazo) && item.status !== 'concluido'
-                    ? 'text-priority-alta font-medium'
-                    : 'text-text-secondary',
+              <div>
+                <span
+                  className={cn(
+                    'text-xs',
+                    isOverdue(item.prazo) && item.status !== 'concluido'
+                      ? 'text-priority-alta font-medium'
+                      : 'text-text-secondary',
+                  )}
+                >
+                  {formatDate(item.prazo)}
+                </span>
+                {daysLabel && (
+                  <div className={cn('text-[10px] mt-0.5', daysLabel.className)}>{daysLabel.text}</div>
                 )}
-              >
-                {formatDate(item.prazo)}
-              </span>
+              </div>
+            ) : (
+              <span className="text-xs text-text-muted">—</span>
+            )}
+          </td>
+        );
+      }
+
+      case 'horas':
+        return (
+          <td key="horas" className={tdClass}>
+            {item.horas != null ? (
+              <span className="text-xs text-text-secondary">{item.horas}h</span>
             ) : (
               <span className="text-xs text-text-muted">—</span>
             )}

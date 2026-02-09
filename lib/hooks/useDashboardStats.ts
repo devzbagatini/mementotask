@@ -24,12 +24,19 @@ export interface DashboardStats {
   clienteProgress: ClientProgress[];
 }
 
-export function useDashboardStats(): DashboardStats {
+/** monthKey = 'geral' | 'YYYY-MM' */
+export function useDashboardStats(monthKey: string = 'geral'): DashboardStats {
   const { items } = useMementotask();
 
   return useMemo(() => {
-    const projetos = items.filter((i) => i.tipo === 'projeto');
-    const tarefas = items.filter((i) => i.tipo === 'tarefa' || i.tipo === 'subtarefa');
+    // Filter items by month if not 'geral'
+    let filtered = items;
+    if (monthKey !== 'geral') {
+      filtered = items.filter((i) => i.criadoEm.startsWith(monthKey));
+    }
+
+    const projetos = filtered.filter((i) => i.tipo === 'projeto');
+    const tarefas = filtered.filter((i) => i.tipo === 'tarefa' || i.tipo === 'subtarefa');
 
     const projetosAtivos = projetos.filter(
       (p) => p.status !== 'concluido' && p.status !== 'cancelado',
@@ -45,11 +52,11 @@ export function useDashboardStats(): DashboardStats {
     }
 
     // Overdue items (has prazo, not completed, prazo is past)
-    const itensAtrasados = items.filter(
+    const itensAtrasados = filtered.filter(
       (i) => isOverdue(i.prazo) && i.status !== 'concluido' && i.status !== 'cancelado',
     );
 
-    // Overall progress
+    // Overall progress — use all items (not just filtered) for child lookup
     const allWithTasks = projetos.filter((p) => {
       return items.some((i) => i.parentId === p.id);
     });
@@ -101,5 +108,5 @@ export function useDashboardStats(): DashboardStats {
       progressoGeral,
       clienteProgress,
     };
-  }, [items]);
+  }, [items, monthKey]);
 }

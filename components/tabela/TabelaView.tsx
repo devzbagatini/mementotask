@@ -29,10 +29,7 @@ import {
 } from '@/lib/columns';
 import { TabelaRow, type DropZone } from './TabelaRow';
 import { ColumnSettings } from './ColumnSettings';
-import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-type SortDir = 'asc' | 'desc';
 
 const ACOES_COLUMN = { label: 'Ações' };
 const COLLAPSED_KEY = 'mementotask_collapsed';
@@ -96,6 +93,10 @@ function buildHierarchicalList(
       const depth = item.tipo === 'projeto' ? 0 : item.tipo === 'tarefa' ? 1 : 2;
       const hasChildren = (childrenMap.get(item.id)?.length ?? 0) > 0;
       result.push({ item, depth, hasChildren });
+      addedIds.add(item.id);
+      if (!collapsed.has(item.id)) {
+        walk(item.id, depth + 1);
+      }
     }
   }
 
@@ -166,6 +167,8 @@ function compareItems(a: Item, b: Item, key: ColumnKey, allItems: Item[]): numbe
     }
     case 'prazo':
       return (a.prazo ?? '').localeCompare(b.prazo ?? '');
+    case 'horas':
+      return (a.horas ?? 0) - (b.horas ?? 0);
     case 'valor':
       return (a.valor ?? 0) - (b.valor ?? 0);
     case 'cliente':
@@ -240,9 +243,7 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
     return filteredItems.filter((i) => includedIds.has(i.id));
   }, [filteredItems, items, clienteFilter]);
 
-  // Sort & hierarchy
-  const [sortKey, setSortKey] = useState<ColumnKey>('nome');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  // Hierarchy & DnD
   const [activeItem, setActiveItem] = useState<Item | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -285,22 +286,9 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
     }),
   );
 
-  const handleSort = (key: ColumnKey) => {
-    if (sortKey === key) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
-  };
-
   const sortedItems = useMemo(() => {
-    const sorted = [...displayItems].sort((a, b) => {
-      const cmp = compareItems(a, b, sortKey, items);
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
-    return buildHierarchicalList(sorted, collapsed);
-  }, [displayItems, items, sortKey, sortDir, collapsed]);
+    return buildHierarchicalList(displayItems, collapsed);
+  }, [displayItems, collapsed]);
 
   const sortedIds = useMemo(
     () => sortedItems.map(({ item }) => item.id),
@@ -399,20 +387,11 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
                   <th
                     key={key}
                     className={cn(
-                      'px-4 py-3 text-left font-medium text-text-secondary cursor-pointer select-none hover:text-text-primary',
+                      'px-4 py-3 text-left font-medium text-text-secondary select-none',
                       className,
                     )}
-                    onClick={() => handleSort(key)}
                   >
-                    <div className="flex items-center gap-1">
-                      {label}
-                      {sortKey === key &&
-                        (sortDir === 'asc' ? (
-                          <ChevronUp className="h-3 w-3" />
-                        ) : (
-                          <ChevronDown className="h-3 w-3" />
-                        ))}
-                    </div>
+                    {label}
                   </th>
                 ))}
                 <th className="px-4 py-3 text-left font-medium text-text-secondary w-20">

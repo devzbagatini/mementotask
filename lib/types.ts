@@ -57,6 +57,7 @@ export interface Item {
   dataEntrega?: string;
 
   // Outras informações
+  horas?: number;
   descricao?: string;
   responsavel?: string;
   tecnologias?: string[];
@@ -84,6 +85,7 @@ export interface ItemCreate {
   dataInicio?: string;
   prazo?: string;
   dataEntrega?: string;
+  horas?: number;
   descricao?: string;
   responsavel?: string;
   tecnologias?: string[];
@@ -92,8 +94,10 @@ export interface ItemCreate {
 
 export interface FilterState {
   status: Status | 'todos';
-  tipoProjeto: string;
+  prioridade: Prioridade | 'todas';
+  projeto: string;
   cliente: string;
   tarefa: string;
+  responsavel: string;
   busca: string;
 }
