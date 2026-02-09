@@ -104,14 +104,14 @@ ALTER TABLE workspace_invites ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "invites_select_owner" ON workspace_invites FOR SELECT 
   USING (workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid()));
 
-CREATE POLICY "invites_select_invited" ON workspace_invites FOR SELECT 
-  USING (email = (SELECT email FROM auth.users WHERE id = auth.uid()));
+CREATE POLICY "invites_select_invited" ON workspace_invites FOR SELECT
+  USING (email = (auth.jwt() ->> 'email'));
 
 CREATE POLICY "invites_insert" ON workspace_invites FOR INSERT 
   WITH CHECK (workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid()));
 
-CREATE POLICY "invites_update" ON workspace_invites FOR UPDATE 
-  USING (email = (SELECT email FROM auth.users WHERE id = auth.uid()));
+CREATE POLICY "invites_update" ON workspace_invites FOR UPDATE
+  USING (email = (auth.jwt() ->> 'email'));
 
 CREATE POLICY "invites_delete" ON workspace_invites FOR DELETE 
   USING (workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid()));

@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useWorkspace } from '@/lib/workspace-context';
-import { Users, X, Mail, Shield, UserMinus, Trash2 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
+import { Users, Mail, Shield, UserMinus, Trash2, Clock, Check, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { cn } from '@/lib/utils';
 
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrador', description: 'Pode gerenciar membros e projetos' },
@@ -13,8 +13,19 @@ const ROLE_OPTIONS = [
   { value: 'viewer', label: 'Visualizador', description: 'Apenas visualiza projetos' },
 ];
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Administrador',
+  editor: 'Editor',
+  viewer: 'Visualizador',
+};
+
 export function WorkspaceShare() {
-  const { currentWorkspace, members, inviteToWorkspace, removeFromWorkspace, changeMemberRole, deleteCurrentWorkspace } = useWorkspace();
+  const { user } = useAuth();
+  const {
+    currentWorkspace, members, sentInvites,
+    inviteToWorkspace, removeFromWorkspace, changeMemberRole,
+    cancelInvite, deleteCurrentWorkspace,
+  } = useWorkspace();
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<'admin' | 'editor' | 'viewer'>('editor');
@@ -25,6 +36,8 @@ export function WorkspaceShare() {
   if (!currentWorkspace || currentWorkspace.role === 'viewer') return null;
 
   const canManageMembers = currentWorkspace.role === 'owner' || currentWorkspace.role === 'admin';
+  const pendingSentInvites = sentInvites.filter(i => !i.acceptedAt);
+  const acceptedSentInvites = sentInvites.filter(i => i.acceptedAt);
 
   return (
     <>
@@ -34,8 +47,8 @@ export function WorkspaceShare() {
       >
         <Users className="h-4 w-4 text-text-muted" />
         <span className="text-sm text-text-secondary">
-          {currentWorkspace.memberCount > 1 
-            ? `${currentWorkspace.memberCount} membros` 
+          {currentWorkspace.memberCount > 1
+            ? `${currentWorkspace.memberCount} membros`
             : 'Compartilhar'}
         </span>
       </button>
@@ -50,7 +63,7 @@ export function WorkspaceShare() {
           {canManageMembers && (
             <div className="space-y-3">
               <h3 className="text-sm font-medium text-text-secondary">Convidar Membro</h3>
-              
+
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
@@ -94,21 +107,54 @@ export function WorkspaceShare() {
             </div>
           )}
 
+          {/* Pending Invites */}
+          {pendingSentInvites.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-text-secondary">
+                Convites Pendentes ({pendingSentInvites.length})
+              </h3>
+              <div className="space-y-2">
+                {pendingSentInvites.map((invite) => (
+                  <div key={invite.id} className="flex items-center gap-3 p-3 rounded-lg bg-surface-2">
+                    <div className="h-8 w-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                      <Clock className="h-4 w-4 text-yellow-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text-primary truncate">{invite.email}</p>
+                      <p className="text-xs text-text-muted">
+                        {ROLE_LABELS[invite.role] || invite.role} — aguardando
+                      </p>
+                    </div>
+                    {canManageMembers && (
+                      <button
+                        onClick={() => cancelInvite(invite.id)}
+                        className="p-1.5 rounded-lg text-text-muted hover:text-priority-alta hover:bg-priority-alta/10 transition-colors"
+                        title="Cancelar convite"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Members List */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-text-secondary">
               Membros ({members.length + 1})
             </h3>
-            
+
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {/* Owner */}
               <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-2">
                 <div className="h-8 w-8 rounded-full bg-accent-projeto flex items-center justify-center text-white text-sm font-bold">
-                  {currentWorkspace.role === 'owner' ? 'Você' : 'D'}
+                  {user?.email?.charAt(0).toUpperCase() || 'V'}
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-text-primary">
-                    {currentWorkspace.role === 'owner' ? 'Você (Proprietário)' : 'Proprietário'}
+                    {currentWorkspace.role === 'owner' ? `Você (${user?.email || ''})` : 'Proprietário'}
                   </p>
                   <p className="text-xs text-text-muted">Proprietário</p>
                 </div>
@@ -117,8 +163,8 @@ export function WorkspaceShare() {
 
               {/* Other Members */}
               {members.map((member) => (
-                <div 
-                  key={member.id} 
+                <div
+                  key={member.id}
                   className="flex items-center gap-3 p-3 rounded-lg bg-surface-2"
                 >
                   <div className="h-8 w-8 rounded-full bg-surface-3 flex items-center justify-center text-text-secondary text-sm font-bold">
@@ -129,11 +175,10 @@ export function WorkspaceShare() {
                       {member.email || 'Usuário'}
                     </p>
                     <p className="text-xs text-text-muted">
-                      {member.role === 'admin' ? 'Administrador' :
-                       member.role === 'editor' ? 'Editor' : 'Visualizador'}
+                      {ROLE_LABELS[member.role] || member.role}
                     </p>
                   </div>
-                  
+
                   {canManageMembers && member.userId !== currentWorkspace.ownerId && (
                     <div className="flex items-center gap-2">
                       <select
@@ -145,7 +190,7 @@ export function WorkspaceShare() {
                           <option key={role.value} value={role.value}>{role.label}</option>
                         ))}
                       </select>
-                      
+
                       <button
                         onClick={() => removeFromWorkspace(member.userId)}
                         className="p-1.5 rounded-lg text-priority-alta hover:bg-priority-alta/10 transition-colors"
@@ -158,13 +203,35 @@ export function WorkspaceShare() {
                 </div>
               ))}
 
-              {members.length === 0 && (
+              {members.length === 0 && pendingSentInvites.length === 0 && (
                 <p className="text-center text-sm text-text-muted py-4">
                   Nenhum membro convidado ainda.
                 </p>
               )}
             </div>
           </div>
+
+          {/* Accepted Invites History */}
+          {acceptedSentInvites.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-text-secondary">
+                Convites Aceitos ({acceptedSentInvites.length})
+              </h3>
+              <div className="space-y-2">
+                {acceptedSentInvites.map((invite) => (
+                  <div key={invite.id} className="flex items-center gap-3 p-3 rounded-lg bg-surface-2 opacity-70">
+                    <div className="h-8 w-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <Check className="h-4 w-4 text-green-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text-primary truncate">{invite.email}</p>
+                      <p className="text-xs text-text-muted">{ROLE_LABELS[invite.role] || invite.role} — aceito</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Info */}
           <div className="p-3 rounded-lg bg-surface-2 text-xs text-text-muted space-y-1">

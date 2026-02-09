@@ -165,6 +165,45 @@ export async function acceptInvite(inviteId: string): Promise<void> {
   if (error) throw error;
 }
 
+// Load sent invites for a workspace (owner view)
+export async function loadWorkspaceInvites(workspaceId: string): Promise<{
+  id: string;
+  email: string;
+  role: string;
+  invitedAt: string;
+  acceptedAt: string | null;
+}[]> {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data, error } = await supabase
+    .from('workspace_invites')
+    .select('id, email, role, invited_at, accepted_at')
+    .eq('workspace_id', workspaceId)
+    .order('invited_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map(inv => ({
+    id: inv.id,
+    email: inv.email,
+    role: inv.role,
+    invitedAt: inv.invited_at,
+    acceptedAt: inv.accepted_at,
+  }));
+}
+
+// Delete an invite
+export async function deleteInvite(inviteId: string): Promise<void> {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { error } = await supabase
+    .from('workspace_invites')
+    .delete()
+    .eq('id', inviteId);
+
+  if (error) throw error;
+}
+
 // Load pending invites for current user
 export async function loadPendingInvites(): Promise<any[]> {
   if (!supabase) throw new Error('Supabase not configured');

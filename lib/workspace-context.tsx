@@ -19,15 +19,26 @@ import {
   removeMember,
   updateMemberRole,
   loadWorkspaceMembers,
+  loadWorkspaceInvites,
+  deleteInvite,
   loadPendingInvites,
   acceptInvite,
 } from './workspace-storage';
+
+interface WorkspaceInviteItem {
+  id: string;
+  email: string;
+  role: string;
+  invitedAt: string;
+  acceptedAt: string | null;
+}
 
 interface WorkspaceContextValue {
   workspaces: WorkspaceWithRole[];
   currentWorkspace: WorkspaceWithRole | null;
   members: WorkspaceMember[];
   pendingInvites: any[];
+  sentInvites: WorkspaceInviteItem[];
   loading: boolean;
   setCurrentWorkspace: (workspace: WorkspaceWithRole | null) => void;
   createNewWorkspace: (nome: string, descricao?: string) => Promise<void>;
@@ -36,6 +47,7 @@ interface WorkspaceContextValue {
   inviteToWorkspace: (email: string, role: WorkspaceMember['role']) => Promise<void>;
   removeFromWorkspace: (userId: string) => Promise<void>;
   changeMemberRole: (userId: string, role: WorkspaceMember['role']) => Promise<void>;
+  cancelInvite: (inviteId: string) => Promise<void>;
   refreshMembers: () => Promise<void>;
   refreshWorkspaces: () => Promise<void>;
   loadInvites: () => Promise<void>;
@@ -53,6 +65,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [currentWorkspace, setCurrentWorkspaceState] = useState<WorkspaceWithRole | null>(null);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [sentInvites, setSentInvites] = useState<WorkspaceInviteItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Load workspaces on mount
@@ -67,12 +80,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     loadUserWorkspaces();
   }, [user]);
 
-  // Load members when workspace changes
+  // Load members and invites when workspace changes
   useEffect(() => {
     if (currentWorkspace?.id) {
       loadMembers();
+      loadSentInvites();
     } else {
       setMembers([]);
+      setSentInvites([]);
     }
   }, [currentWorkspace?.id]);
 
@@ -108,12 +123,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   async function loadMembers() {
     if (!currentWorkspace?.id) return;
-    
+
     try {
       const data = await loadWorkspaceMembers(currentWorkspace.id);
       setMembers(data);
     } catch (error) {
       console.error('Error loading members:', error);
+    }
+  }
+
+  async function loadSentInvites() {
+    if (!currentWorkspace?.id) return;
+
+    try {
+      const data = await loadWorkspaceInvites(currentWorkspace.id);
+      setSentInvites(data);
+    } catch (error) {
+      console.error('Error loading sent invites:', error);
     }
   }
 
@@ -195,15 +221,44 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   async function inviteToWorkspace(email: string, role: WorkspaceMember['role']) {
     if (!currentWorkspace || !user) return;
-    
+
     try {
       await inviteMember(currentWorkspace.id, email, role, user.id);
+
+      // Send invite email
+      try {
+        await fetch('/api/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            workspaceName: currentWorkspace.nome,
+            invitedByEmail: user.email,
+            role,
+          }),
+        });
+      } catch (emailErr) {
+        console.error('Error sending invite email:', emailErr);
+      }
+
       await loadMembers();
+      await loadSentInvites();
       addToast(`Convite enviado para ${email}`);
     } catch (error: any) {
       console.error('Error inviting member:', error);
       addToast(error.message || 'Erro ao convidar membro');
       throw error;
+    }
+  }
+
+  async function cancelInvite(inviteId: string) {
+    try {
+      await deleteInvite(inviteId);
+      await loadSentInvites();
+      addToast('Convite cancelado');
+    } catch (error) {
+      console.error('Error canceling invite:', error);
+      addToast('Erro ao cancelar convite');
     }
   }
 
@@ -270,6 +325,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     currentWorkspace,
     members,
     pendingInvites,
+    sentInvites,
     loading,
     setCurrentWorkspace,
     createNewWorkspace,
@@ -278,6 +334,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     inviteToWorkspace,
     removeFromWorkspace,
     changeMemberRole,
+    cancelInvite,
     refreshMembers,
     refreshWorkspaces,
     loadInvites,
