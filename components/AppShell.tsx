@@ -9,6 +9,7 @@ import { SettingsProvider } from '@/lib/settings-context';
 import { ToastProvider } from '@/lib/toast';
 import { useToast } from '@/lib/toast';
 import { useAuth } from '@/lib/auth-context';
+import { useWorkspace } from '@/lib/workspace-context';
 import { BookOpen } from 'lucide-react';
 import { Header } from './Header';
 import { TabNav } from './TabNav';
@@ -27,6 +28,44 @@ import { LiberView } from './liber/LiberView';
 import { DateTimeClock } from './DateTimeClock';
 import { PomodoroTimer } from './PomodoroTimer';
 import { WelcomeModal } from './WelcomeModal';
+import { useRealtimeUpdates } from '@/lib/hooks/useRealtimeUpdates';
+import { RefreshCw, X } from 'lucide-react';
+
+function RealtimeBanner() {
+  const { hasUpdate, message, dismiss } = useRealtimeUpdates();
+  const { reloadItems } = useMementotask();
+  const { refreshMembers, refreshWorkspaces } = useWorkspace();
+
+  if (!hasUpdate) return null;
+
+  async function handleRefresh() {
+    await Promise.all([reloadItems(), refreshMembers(), refreshWorkspaces()]);
+    dismiss();
+  }
+
+  return (
+    <div className="bg-accent-projeto text-white text-sm">
+      <div className="mx-auto max-w-[1400px] flex items-center justify-between px-4 py-2 sm:px-6">
+        <span>{message}</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors font-medium"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Atualizar
+          </button>
+          <button
+            onClick={dismiss}
+            className="p-1 rounded-md hover:bg-white/20 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -61,6 +100,7 @@ function AppContent() {
   if (showSettings) {
     return (
       <div className="min-h-screen bg-surface-0">
+        <RealtimeBanner />
         <Header onOpenSettings={() => setShowSettings(true)} />
         <SettingsView onBack={() => setShowSettings(false)} />
         <ToastContainer />
@@ -71,6 +111,7 @@ function AppContent() {
   if (showLiber) {
     return (
       <div className="min-h-screen bg-surface-0">
+        <RealtimeBanner />
         <Header onOpenSettings={() => { setShowLiber(false); setShowSettings(true); }} />
         <LiberView onBack={() => setShowLiber(false)} />
         <ToastContainer />
@@ -94,6 +135,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-surface-0">
+      <RealtimeBanner />
       <Header onOpenSettings={() => setShowSettings(true)} />
       <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6">
         <DashboardPanel />
