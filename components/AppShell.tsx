@@ -139,6 +139,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-surface-0">
       <RealtimeBanner />
+      <PendingInvitesBanner />
       <Header onOpenSettings={() => setShowSettings(true)} />
       <div className="mx-auto max-w-[1400px] px-4 py-4 sm:px-6">
         <DashboardPanel />
