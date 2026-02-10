@@ -17,8 +17,8 @@ import { loadItems as loadSupabaseItems, createItem as createSupabaseItem, updat
 import { loadItemsByWorkspace, createItemInWorkspace } from './workspace-storage';
 import { useWorkspace } from './workspace-context';
 import { calculateProgress, getUniqueClientes } from './utils';
-import { MOCK_DATA } from './mock-data';
 import { useAuth } from './auth-context';
+import { supabase } from './supabase';
 
 interface MementotaskContextValue {
   items: Item[];
@@ -74,22 +74,17 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
           // Load from Supabase with workspace filter
           const workspaceId = currentWorkspace?.id || null;
           items = await loadItemsByWorkspace(workspaceId, user.id);
-        } else {
-          // Load from localStorage
+        } else if (!supabase) {
+          // Only load localStorage when Supabase is not configured (local dev)
           items = loadLocalItems();
-          if (items.length === 0) {
-            items = MOCK_DATA;
-            saveLocalItems(items);
-          }
+        } else {
+          // Supabase configured but no user — show nothing
+          items = [];
         }
 
         dispatch({ type: 'SET_ITEMS', payload: items });
       } catch (error) {
         console.error('Error loading items:', error);
-        if (!user) {
-          const items = loadLocalItems();
-          dispatch({ type: 'SET_ITEMS', payload: items.length > 0 ? items : MOCK_DATA });
-        }
       } finally {
         setIsLoading(false);
       }
