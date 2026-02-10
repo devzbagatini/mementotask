@@ -15,6 +15,9 @@ DROP TABLE IF EXISTS shares CASCADE;
 DROP FUNCTION IF EXISTS accept_workspace_invite(UUID);
 DROP FUNCTION IF EXISTS accept_workspace_invite(UUID, UUID);
 DROP FUNCTION IF EXISTS update_workspace_timestamp();
+DROP FUNCTION IF EXISTS is_workspace_member(UUID);
+DROP FUNCTION IF EXISTS is_workspace_owner(UUID);
+DROP FUNCTION IF EXISTS get_member_role(UUID);
 
 -- ============================================
 -- 2. TABELA: WORKSPACES
@@ -30,7 +33,6 @@ CREATE TABLE workspaces (
 
 CREATE INDEX idx_workspaces_owner ON workspaces(owner_id);
 
--- Trigger para atualizar timestamp
 CREATE OR REPLACE FUNCTION update_workspace_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -43,17 +45,6 @@ CREATE TRIGGER update_workspace_em_modificacao
 BEFORE UPDATE ON workspaces
 FOR EACH ROW
 EXECUTE FUNCTION update_workspace_timestamp();
-
--- RLS: dono vê/gerencia, membros podem ver
-ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "workspaces_select" ON workspaces FOR SELECT USING (
-  owner_id = auth.uid()
-  OR id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid())
-);
-CREATE POLICY "workspaces_insert" ON workspaces FOR INSERT WITH CHECK (owner_id = auth.uid());
-CREATE POLICY "workspaces_update" ON workspaces FOR UPDATE USING (owner_id = auth.uid());
-CREATE POLICY "workspaces_delete" ON workspaces FOR DELETE USING (owner_id = auth.uid());
 
 -- ============================================
 -- 3. TABELA: WORKSPACE_MEMBERS
@@ -71,27 +62,6 @@ CREATE TABLE workspace_members (
 
 CREATE INDEX idx_workspace_members_workspace ON workspace_members(workspace_id);
 CREATE INDEX idx_workspace_members_user ON workspace_members(user_id);
-
--- RLS
-ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "members_select" ON workspace_members FOR SELECT USING (
-  workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid())
-  OR workspace_id IN (SELECT wm.workspace_id FROM workspace_members wm WHERE wm.user_id = auth.uid())
-);
-
-CREATE POLICY "members_insert" ON workspace_members FOR INSERT WITH CHECK (
-  workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid())
-);
-
-CREATE POLICY "members_update" ON workspace_members FOR UPDATE USING (
-  workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid())
-);
-
-CREATE POLICY "members_delete" ON workspace_members FOR DELETE USING (
-  workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid())
-  OR user_id = auth.uid()
-);
 
 -- ============================================
 -- 4. TABELA: WORKSPACE_INVITES
@@ -111,26 +81,8 @@ CREATE TABLE workspace_invites (
 CREATE INDEX idx_workspace_invites_workspace ON workspace_invites(workspace_id);
 CREATE INDEX idx_workspace_invites_email ON workspace_invites(email);
 
--- RLS
-ALTER TABLE workspace_invites ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "invites_select_owner" ON workspace_invites FOR SELECT
-  USING (workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid()));
-
-CREATE POLICY "invites_select_invited" ON workspace_invites FOR SELECT
-  USING (email = (auth.jwt() ->> 'email'));
-
-CREATE POLICY "invites_insert" ON workspace_invites FOR INSERT
-  WITH CHECK (workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid()));
-
-CREATE POLICY "invites_update" ON workspace_invites FOR UPDATE
-  USING (email = (auth.jwt() ->> 'email'));
-
-CREATE POLICY "invites_delete" ON workspace_invites FOR DELETE
-  USING (workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid()));
-
 -- ============================================
--- 5. TABELA: ITEMS (PROJETOS, TAREFAS, SUBTAREFAS)
+-- 5. TABELA: ITEMS
 -- ============================================
 CREATE TABLE items (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -167,7 +119,6 @@ CREATE INDEX idx_items_user_id ON items(user_id);
 CREATE INDEX idx_items_workspace ON items(workspace_id);
 CREATE INDEX idx_items_parent ON items(parent_id);
 
--- Trigger para atualizar timestamp
 CREATE OR REPLACE FUNCTION update_item_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -181,64 +132,109 @@ BEFORE UPDATE ON items
 FOR EACH ROW
 EXECUTE FUNCTION update_item_timestamp();
 
--- RLS: dono vê seus items + membros do workspace
+-- ============================================
+-- 6. FUNÇÕES AUXILIARES (SECURITY DEFINER - quebram recursao RLS)
+-- ============================================
+
+CREATE OR REPLACE FUNCTION is_workspace_member(ws_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM workspace_members WHERE workspace_id = ws_id AND user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION is_workspace_owner(ws_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM workspaces WHERE id = ws_id AND owner_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_member_role(ws_id UUID)
+RETURNS TEXT AS $$
+DECLARE
+  member_role TEXT;
+BEGIN
+  SELECT role INTO member_role FROM workspace_members
+  WHERE workspace_id = ws_id AND user_id = auth.uid();
+  RETURN member_role;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
+-- 7. RLS: WORKSPACES
+-- ============================================
+ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "workspaces_select" ON workspaces FOR SELECT USING (
+  owner_id = auth.uid() OR is_workspace_member(id)
+);
+CREATE POLICY "workspaces_insert" ON workspaces FOR INSERT WITH CHECK (owner_id = auth.uid());
+CREATE POLICY "workspaces_update" ON workspaces FOR UPDATE USING (owner_id = auth.uid());
+CREATE POLICY "workspaces_delete" ON workspaces FOR DELETE USING (owner_id = auth.uid());
+
+-- ============================================
+-- 8. RLS: WORKSPACE_MEMBERS
+-- ============================================
+ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "members_select" ON workspace_members FOR SELECT USING (
+  user_id = auth.uid() OR is_workspace_owner(workspace_id)
+);
+CREATE POLICY "members_insert" ON workspace_members FOR INSERT WITH CHECK (
+  is_workspace_owner(workspace_id)
+);
+CREATE POLICY "members_update" ON workspace_members FOR UPDATE USING (
+  is_workspace_owner(workspace_id)
+);
+CREATE POLICY "members_delete" ON workspace_members FOR DELETE USING (
+  is_workspace_owner(workspace_id) OR user_id = auth.uid()
+);
+
+-- ============================================
+-- 9. RLS: WORKSPACE_INVITES
+-- ============================================
+ALTER TABLE workspace_invites ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "invites_select_owner" ON workspace_invites FOR SELECT
+  USING (is_workspace_owner(workspace_id));
+CREATE POLICY "invites_select_invited" ON workspace_invites FOR SELECT
+  USING (email = (auth.jwt() ->> 'email'));
+CREATE POLICY "invites_insert" ON workspace_invites FOR INSERT
+  WITH CHECK (is_workspace_owner(workspace_id));
+CREATE POLICY "invites_update" ON workspace_invites FOR UPDATE
+  USING (email = (auth.jwt() ->> 'email'));
+CREATE POLICY "invites_delete" ON workspace_invites FOR DELETE
+  USING (is_workspace_owner(workspace_id));
+
+-- ============================================
+-- 10. RLS: ITEMS
+-- ============================================
 ALTER TABLE items ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "items_select" ON items FOR SELECT USING (
   user_id = auth.uid()
-  OR (
-    workspace_id IS NOT NULL
-    AND (
-      workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid())
-      OR workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid())
-    )
-  )
+  OR (workspace_id IS NOT NULL AND (is_workspace_owner(workspace_id) OR is_workspace_member(workspace_id)))
 );
-
 CREATE POLICY "items_insert" ON items FOR INSERT WITH CHECK (
   user_id = auth.uid()
-  OR (
-    workspace_id IS NOT NULL
-    AND (
-      workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid())
-      OR workspace_id IN (
-        SELECT workspace_id FROM workspace_members
-        WHERE user_id = auth.uid() AND role IN ('admin', 'editor')
-      )
-    )
-  )
+  OR (workspace_id IS NOT NULL AND (is_workspace_owner(workspace_id) OR get_member_role(workspace_id) IN ('admin', 'editor')))
 );
-
 CREATE POLICY "items_update" ON items FOR UPDATE USING (
   user_id = auth.uid()
-  OR (
-    workspace_id IS NOT NULL
-    AND (
-      workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid())
-      OR workspace_id IN (
-        SELECT workspace_id FROM workspace_members
-        WHERE user_id = auth.uid() AND role IN ('admin', 'editor')
-      )
-    )
-  )
+  OR (workspace_id IS NOT NULL AND (is_workspace_owner(workspace_id) OR get_member_role(workspace_id) IN ('admin', 'editor')))
 );
-
 CREATE POLICY "items_delete" ON items FOR DELETE USING (
   user_id = auth.uid()
-  OR (
-    workspace_id IS NOT NULL
-    AND (
-      workspace_id IN (SELECT id FROM workspaces WHERE owner_id = auth.uid())
-      OR workspace_id IN (
-        SELECT workspace_id FROM workspace_members
-        WHERE user_id = auth.uid() AND role = 'admin'
-      )
-    )
-  )
+  OR (workspace_id IS NOT NULL AND (is_workspace_owner(workspace_id) OR get_member_role(workspace_id) = 'admin'))
 );
 
 -- ============================================
--- 6. FUNÇÃO: ACEITAR CONVITE (SECURITY DEFINER)
+-- 11. FUNÇÃO: ACEITAR CONVITE
 -- ============================================
 CREATE OR REPLACE FUNCTION accept_workspace_invite(invite_id UUID)
 RETURNS VOID AS $$
@@ -272,17 +268,11 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
--- 7. REALTIME
+-- 12. REALTIME
 -- ============================================
 ALTER PUBLICATION supabase_realtime ADD TABLE items, workspace_members, workspace_invites;
 
 -- ============================================
--- 8. VERIFICAÇÃO FINAL
+-- VERIFICAÇÃO
 -- ============================================
 SELECT 'BANCO DE DADOS CRIADO COM SUCESSO!' as status;
-
-SELECT table_name
-FROM information_schema.tables
-WHERE table_schema = 'public'
-AND table_name IN ('workspaces', 'workspace_members', 'workspace_invites', 'items')
-ORDER BY table_name;
