@@ -10,8 +10,3 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'your-project-url' || su
 export const supabase = (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'your-project-url')
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
-
-// Expor globalmente para debug no console
-if (typeof window !== 'undefined' && supabase) {
-  (window as any).supabase = supabase;
-}

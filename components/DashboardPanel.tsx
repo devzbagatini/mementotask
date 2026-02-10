@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { BarChart3, ChevronDown, ChevronUp, Briefcase, CheckSquare, DollarSign, AlertTriangle, Calendar } from 'lucide-react';
+import { BarChart3, ChevronDown, ChevronUp, Briefcase, CheckSquare, DollarSign, AlertTriangle, Calendar, UserCheck } from 'lucide-react';
 import { useDashboardStats } from '@/lib/hooks/useDashboardStats';
 import { useMementotask } from '@/lib/context';
 import { formatCurrency, cn } from '@/lib/utils';
@@ -119,7 +119,7 @@ export function DashboardPanel() {
       {isOpen && (
         <div className="mt-2 rounded-xl border border-border bg-surface-1 p-4 space-y-4 font-data text-sm">
           {/* Stats cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <StatCard
               icon={Briefcase}
               label="Projetos"
@@ -133,6 +133,13 @@ export function DashboardPanel() {
               value={stats.totalTarefas}
               subValue={`${stats.tarefasConcluidas} concluidas`}
               color="text-accent-tarefa"
+            />
+            <StatCard
+              icon={UserCheck}
+              label="Minhas Tarefas"
+              value={stats.minhasTarefas}
+              subValue={stats.minhasTarefas > 0 ? `${stats.minhasTarefasConcluidas} concluidas` : 'Nenhuma designada'}
+              color="text-accent-subtarefa"
             />
             <StatCard
               icon={DollarSign}

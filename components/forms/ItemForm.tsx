@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useMemo, type FormEvent } from 'react';
+import { useState, useMemo, useRef, type FormEvent } from 'react';
 import type { Item, ItemCreate, Tipo, Status, Prioridade } from '@/lib/types';
 import { STATUSES, STATUS_LABELS, PRIORIDADES, PRIORIDADE_LABELS } from '@/lib/types';
 import { useMementotask } from '@/lib/context';
+import { useAuth } from '@/lib/auth-context';
+import { useWorkspace } from '@/lib/workspace-context';
 import { Briefcase, ListTodo, User } from 'lucide-react';
 
 interface ItemFormProps {
@@ -16,7 +18,9 @@ interface ItemFormProps {
 
 export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormProps) {
   const isEdit = !!item;
-  const { items } = useMementotask();
+  const { items, uniqueResponsaveis } = useMementotask();
+  const { user } = useAuth();
+  const { members, sentInvites, currentWorkspace } = useWorkspace();
   const uniqueTipoProjeto = [...new Set(items.filter(i => i.tipoProjeto).map(i => i.tipoProjeto!))];
 
   // Form state
@@ -40,6 +44,19 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
   const [selectedParentId, setSelectedParentId] = useState<string>(parentId ?? '');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showMentions, setShowMentions] = useState(false);
+  const responsavelRef = useRef<HTMLInputElement>(null);
+
+  // Build mention suggestions: current user + existing responsaveis + invite emails
+  const mentionSuggestions = useMemo(() => {
+    const suggestions = new Set<string>();
+    if (user?.email) suggestions.add(user.email);
+    for (const r of uniqueResponsaveis) suggestions.add(r);
+    for (const inv of sentInvites) {
+      if (inv.acceptedAt) suggestions.add(inv.email);
+    }
+    return [...suggestions].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [user?.email, uniqueResponsaveis, sentInvites]);
 
   // Build ancestry info (for tarefa/subtarefa context display)
   const ancestry = useMemo(() => {
@@ -225,9 +242,54 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
       </div>
 
       {/* Responsável */}
-      <div>
+      <div className="relative">
         <label className={labelClass}>Responsável</label>
-        <input type="text" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className={inputClass} placeholder="Nome do responsável" />
+        <input
+          ref={responsavelRef}
+          type="text"
+          value={responsavel}
+          onChange={(e) => {
+            setResponsavel(e.target.value);
+            setShowMentions(e.target.value.endsWith('@') || (e.target.value.includes('@') && showMentions));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === '@') setShowMentions(true);
+            if (e.key === 'Escape') setShowMentions(false);
+          }}
+          onFocus={() => {
+            if (responsavel.endsWith('@')) setShowMentions(true);
+          }}
+          onBlur={() => setTimeout(() => setShowMentions(false), 200)}
+          className={inputClass}
+          placeholder="Digite @ para mencionar"
+        />
+        {showMentions && mentionSuggestions.length > 0 && (
+          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-surface-1 border border-border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+            {mentionSuggestions
+              .filter((s) => {
+                const afterAt = responsavel.split('@').pop()?.toLowerCase() || '';
+                return afterAt === '' || s.toLowerCase().includes(afterAt);
+              })
+              .map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  const atIndex = responsavel.lastIndexOf('@');
+                  const before = atIndex >= 0 ? responsavel.slice(0, atIndex) : responsavel;
+                  setResponsavel((before + suggestion).trim());
+                  setShowMentions(false);
+                  responsavelRef.current?.focus();
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-surface-2 transition-colors flex items-center gap-2"
+              >
+                <User className="h-3.5 w-3.5 text-text-muted" />
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Project-specific fields */}

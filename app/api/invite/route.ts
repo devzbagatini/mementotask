@@ -1,8 +1,47 @@
 import { Resend } from 'resend';
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 export async function POST(req: NextRequest) {
   try {
+    // CSRF: validate origin
+    const origin = req.headers.get('origin');
+    const allowedOrigins = ['https://mementotask.dev', 'http://localhost:3000'];
+    if (!origin || !allowedOrigins.includes(origin)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Auth: validate Supabase session
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Resend setup
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: 'Email service not configured' }, { status: 500 });
@@ -15,6 +54,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 });
     }
 
+    // Sanitize all user inputs for HTML
+    const safeEmail = escapeHtml(String(email));
+    const safeWorkspaceName = escapeHtml(String(workspaceName));
+    const safeInvitedBy = escapeHtml(String(invitedByEmail || user.email || 'Alguem'));
+    const safeRole = escapeHtml(String(role || ''));
+
     const roleLabels: Record<string, string> = {
       admin: 'Administrador',
       editor: 'Editor',
@@ -24,7 +69,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await resend.emails.send({
       from: 'Mementotask <noreply@mementotask.dev>',
       to: email,
-      subject: `Você foi convidado para "${workspaceName}" no Mementotask`,
+      subject: `Voce foi convidado para "${safeWorkspaceName}" no Mementotask`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px 20px;">
           <div style="text-align: center; margin-bottom: 32px;">
@@ -33,11 +78,11 @@ export async function POST(req: NextRequest) {
 
           <div style="background: #f9f9f9; border-radius: 12px; padding: 32px; text-align: center;">
             <p style="font-size: 16px; color: #333; margin: 0 0 8px;">
-              <strong>${invitedByEmail || 'Alguém'}</strong> convidou você para o workspace:
+              <strong>${safeInvitedBy}</strong> convidou voce para o workspace:
             </p>
-            <h2 style="font-size: 22px; color: #8c1c13; margin: 8px 0 16px;">${workspaceName}</h2>
+            <h2 style="font-size: 22px; color: #8c1c13; margin: 8px 0 16px;">${safeWorkspaceName}</h2>
             <p style="font-size: 14px; color: #666; margin: 0 0 24px;">
-              Função: <strong>${roleLabels[role] || role}</strong>
+              Funcao: <strong>${roleLabels[role] || safeRole}</strong>
             </p>
 
             <a href="https://mementotask.dev"
@@ -47,20 +92,18 @@ export async function POST(req: NextRequest) {
           </div>
 
           <p style="font-size: 12px; color: #999; text-align: center; margin-top: 24px;">
-            Crie uma conta com este email ou faça login para aceitar o convite.
+            Crie uma conta com este email ou faca login para aceitar o convite.
           </p>
         </div>
       `,
     });
 
     if (error) {
-      console.error('Resend error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, id: data?.id });
   } catch (err: any) {
-    console.error('API invite error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

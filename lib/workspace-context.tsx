@@ -24,6 +24,7 @@ import {
   loadPendingInvites,
   acceptInvite,
 } from './workspace-storage';
+import { supabase } from './supabase';
 
 interface WorkspaceInviteItem {
   id: string;
@@ -68,16 +69,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [sentInvites, setSentInvites] = useState<WorkspaceInviteItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load workspaces on mount
+  // Load workspaces and pending invites on mount
   useEffect(() => {
     if (!user) {
       setWorkspaces([]);
       setCurrentWorkspaceState(null);
+      setPendingInvites([]);
       setLoading(false);
       return;
     }
 
     loadUserWorkspaces();
+    loadInvites();
   }, [user]);
 
   // Load members and invites when workspace changes
@@ -93,12 +96,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   async function loadUserWorkspaces() {
     if (!user) return;
-    
+
     setLoading(true);
     try {
-      const data = await loadWorkspaces(user.id);
+      let data = await loadWorkspaces(user.id);
+
+      // Auto-create default workspace on first login
+      if (data.length === 0) {
+        await createWorkspace(user.id, 'Meu Workspace');
+        data = await loadWorkspaces(user.id);
+      }
+
       setWorkspaces(data);
-      
+
       // Restore from localStorage or use first workspace
       const savedId = localStorage.getItem(STORAGE_KEY);
       if (savedId) {
@@ -227,9 +237,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       // Send invite email
       try {
+        const session = await supabase?.auth.getSession();
+        const token = session?.data?.session?.access_token;
         await fetch('/api/invite', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             email,
             workspaceName: currentWorkspace.nome,
@@ -238,7 +253,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           }),
         });
       } catch (emailErr) {
-        console.error('Error sending invite email:', emailErr);
+        // Email send failure should not block the invite
       }
 
       await loadMembers();

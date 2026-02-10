@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useMementotask } from '@/lib/context';
+import { useAuth } from '@/lib/auth-context';
 import type { Item } from '@/lib/types';
 import { calculateProgress, isOverdue } from '@/lib/utils';
 
@@ -22,11 +23,14 @@ export interface DashboardStats {
   itensAtrasados: Item[];
   progressoGeral: number;
   clienteProgress: ClientProgress[];
+  minhasTarefas: number;
+  minhasTarefasConcluidas: number;
 }
 
 /** monthKey = 'geral' | 'YYYY-MM' */
 export function useDashboardStats(monthKey: string = 'geral'): DashboardStats {
   const { items } = useMementotask();
+  const { user } = useAuth();
 
   return useMemo(() => {
     // Filter items by month if not 'geral'
@@ -96,6 +100,14 @@ export function useDashboardStats(monthKey: string = 'geral'): DashboardStats {
     }
     clienteProgress.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
+    // Minhas tarefas (designadas para o user atual pelo email)
+    const userEmail = user?.email?.toLowerCase() || '';
+    const minhasTarefasItems = filtered.filter(
+      (i) => (i.tipo === 'tarefa' || i.tipo === 'subtarefa') && i.responsavel?.toLowerCase() === userEmail,
+    );
+    const minhasTarefas = minhasTarefasItems.length;
+    const minhasTarefasConcluidas = minhasTarefasItems.filter((i) => i.status === 'concluido').length;
+
     return {
       totalProjetos: projetos.length,
       projetosAtivos,
@@ -107,6 +119,8 @@ export function useDashboardStats(monthKey: string = 'geral'): DashboardStats {
       itensAtrasados,
       progressoGeral,
       clienteProgress,
+      minhasTarefas,
+      minhasTarefasConcluidas,
     };
-  }, [items, monthKey]);
+  }, [items, monthKey, user?.email]);
 }

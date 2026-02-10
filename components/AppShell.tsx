@@ -29,6 +29,7 @@ import { DateTimeClock } from './DateTimeClock';
 import { PomodoroTimer } from './PomodoroTimer';
 import { WelcomeModal } from './WelcomeModal';
 import { useRealtimeUpdates } from '@/lib/hooks/useRealtimeUpdates';
+import { PendingInvitesBanner } from './workspace/PendingInvitesBanner';
 import { RefreshCw, X } from 'lucide-react';
 
 function RealtimeBanner() {
@@ -101,6 +102,7 @@ function AppContent() {
     return (
       <div className="min-h-screen bg-surface-0">
         <RealtimeBanner />
+        <PendingInvitesBanner />
         <Header onOpenSettings={() => setShowSettings(true)} />
         <SettingsView onBack={() => setShowSettings(false)} />
         <ToastContainer />
@@ -112,6 +114,7 @@ function AppContent() {
     return (
       <div className="min-h-screen bg-surface-0">
         <RealtimeBanner />
+        <PendingInvitesBanner />
         <Header onOpenSettings={() => { setShowLiber(false); setShowSettings(true); }} />
         <LiberView onBack={() => setShowLiber(false)} />
         <ToastContainer />

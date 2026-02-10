@@ -1,4 +1,4 @@
-import type { Item, ItemCreate, Share, Permissao } from './types';
+import type { Item, ItemCreate } from './types';
 import { supabase } from './supabase';
 
 export async function loadItems(userId: string): Promise<Item[]> {
@@ -8,7 +8,7 @@ export async function loadItems(userId: string): Promise<Item[]> {
   const { data, error } = await supabase
     .from('items')
     .select('*')
-    .or(`user_id.eq.${userId},id.in.(SELECT item_id FROM shares WHERE to_user_id = ${userId})`)
+    .eq('user_id', userId)
     .order('criado_em', { ascending: true });
 
   if (error) throw error;
@@ -121,52 +121,6 @@ export async function deleteItem(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function shareItem(
-  itemId: string,
-  fromUserId: string,
-  toUserEmail: string,
-  permissao: Permissao
-): Promise<Share> {
-  if (!supabase) {
-    throw new Error('Supabase not configured');
-  }
-  const { data: userData } = await supabase
-    .from('auth.users')
-    .select('id')
-    .eq('email', toUserEmail)
-    .single();
-
-  if (!userData) {
-    throw new Error('Usuário não encontrado');
-  }
-
-  const { data, error } = await supabase
-    .from('shares')
-    .insert({
-      item_id: itemId,
-      from_user_id: fromUserId,
-      to_user_id: userData.id,
-      permissao,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return mapRowToShare(data);
-}
-
-export async function loadShares(userId: string): Promise<Share[]> {
-  if (!supabase) {
-    throw new Error('Supabase not configured');
-  }
-  const { data, error } = await supabase
-    .from('shares')
-    .select('*')
-    .eq('to_user_id', userId);
-
-  if (error) throw error;
-  return data.map(mapRowToShare);
-}
 
 function mapRowToItem(row: any): Item {
   return {
@@ -194,13 +148,3 @@ function mapRowToItem(row: any): Item {
   };
 }
 
-function mapRowToShare(row: any): Share {
-  return {
-    id: row.id,
-    itemId: row.item_id,
-    fromUserId: row.from_user_id,
-    toUserId: row.to_user_id,
-    permissao: row.permissao,
-    criadoEm: row.criado_em,
-  };
-}
