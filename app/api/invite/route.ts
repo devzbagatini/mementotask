@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   try {
     // CSRF: validate origin
     const origin = req.headers.get('origin');
-    const allowedOrigins = ['https://mementotask.dev', 'http://localhost:3000'];
+    const allowedOrigins = ['https://mementotask.dev', 'https://www.mementotask.dev', 'http://localhost:3000'];
     if (!origin || !allowedOrigins.includes(origin)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
