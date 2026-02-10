@@ -62,6 +62,7 @@ export function WelcomeModal() {
   }, [items.length]);
 
   function handleClose() {
+    localStorage.setItem(DISMISS_KEY, 'true');
     setIsOpen(false);
   }
 
