@@ -252,7 +252,7 @@ export async function loadWorkspaceMembers(workspaceId: string): Promise<Workspa
 
   const { data, error } = await supabase
     .from('workspace_members')
-    .select('*')
+    .select('*, user:user_id(email)')
     .eq('workspace_id', workspaceId);
 
   if (error) throw error;
@@ -265,6 +265,7 @@ export async function loadWorkspaceMembers(workspaceId: string): Promise<Workspa
     invitedBy: m.invited_by,
     invitedAt: m.invited_at,
     acceptedAt: m.accepted_at,
+    email: m.user?.email || null,
   }));
 }
 
@@ -272,15 +273,14 @@ export async function loadWorkspaceMembers(workspaceId: string): Promise<Workspa
 export async function loadItemsByWorkspace(workspaceId: string | null, userId: string): Promise<Item[]> {
   if (!supabase) throw new Error('Supabase not configured');
 
-  let query = supabase
-    .from('items')
-    .select('*')
-    .eq('user_id', userId);
+  let query = supabase.from('items').select('*');
 
   if (workspaceId) {
+    // Em workspace: ver todos os itens do workspace (RLS filtra)
     query = query.eq('workspace_id', workspaceId);
   } else {
-    query = query.is('workspace_id', null);
+    // Sem workspace: só itens pessoais (user_id = auth.uid())
+    query = query.eq('user_id', userId).is('workspace_id', null);
   }
 
   const { data, error } = await query.order('criado_em', { ascending: true });

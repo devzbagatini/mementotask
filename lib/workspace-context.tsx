@@ -101,8 +101,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     try {
       let data = await loadWorkspaces(user.id);
 
-      // Auto-create default workspace on first login
-      if (data.length === 0) {
+      // Auto-create default workspace on first login OR if user has no owned workspaces
+      const hasOwnedWorkspace = data.some(w => w.role === 'owner');
+      if (!hasOwnedWorkspace) {
         await createWorkspace(user.id, 'Meu Workspace');
         data = await loadWorkspaces(user.id);
       }
