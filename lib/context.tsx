@@ -54,13 +54,15 @@ const MementotaskContext = createContext<MementotaskContextValue | null>(null);
 
 export function MementotaskProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { currentWorkspace, loading: workspaceLoading } = useWorkspace();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load items - wait for workspace to finish loading first
+  // Load items - wait for auth and workspace to finish loading first
   useEffect(() => {
-    // Don't load until workspace context is ready (prevents flash)
+    // Don't load until auth resolves (prevents mock data flash)
+    if (authLoading) return;
+    // Don't load until workspace context is ready
     if (user && workspaceLoading) return;
 
     async function loadData() {
@@ -94,7 +96,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
     }
 
     loadData();
-  }, [user, currentWorkspace?.id, workspaceLoading]);
+  }, [user, authLoading, currentWorkspace?.id, workspaceLoading]);
 
   const reloadItems = useCallback(async () => {
     if (!user) return;
