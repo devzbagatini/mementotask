@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -68,6 +69,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [sentInvites, setSentInvites] = useState<WorkspaceInviteItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(false);
 
   // Load workspaces and pending invites on mount
   useEffect(() => {
@@ -96,6 +98,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   async function loadUserWorkspaces() {
     if (!user) return;
+    if (loadingRef.current) return;
+    loadingRef.current = true;
 
     setLoading(true);
     try {
@@ -129,6 +133,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       addToast('Erro ao carregar workspaces');
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }
 
