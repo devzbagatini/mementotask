@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Kanban, Table, CheckSquare, Plus, MousePointer, Move } from 'lucide-react';
 import { useMementotask } from '@/lib/context';
 import { cn } from '@/lib/utils';
+
+const DISMISS_KEY = 'mementotask_tutorial_dismissed';
 
 interface TutorialStep {
   icon: typeof Kanban;
@@ -45,15 +47,29 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 ];
 
 export function WelcomeModal() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const { items } = useMementotask();
 
-  // Só mostra se for primeiro acesso (tem apenas o projeto de exemplo)
-  const isFirstAccess = items.length > 0 && items.length <= 10 && 
-    items.some(item => item.id === 'proj_bemvindo');
+  useEffect(() => {
+    const dismissed = localStorage.getItem(DISMISS_KEY);
+    if (dismissed === 'true') return;
 
-  if (!isOpen || !isFirstAccess) return null;
+    // Mostra para novos usuarios (poucos items ou nenhum)
+    if (items.length <= 10) {
+      setIsOpen(true);
+    }
+  }, [items.length]);
+
+  function handleClose() {
+    setIsOpen(false);
+    if (dontShowAgain) {
+      localStorage.setItem(DISMISS_KEY, 'true');
+    }
+  }
+
+  if (!isOpen) return null;
 
   const step = TUTORIAL_STEPS[currentStep];
   const Icon = step.icon;
@@ -101,10 +117,23 @@ export function WelcomeModal() {
           </p>
         </div>
 
+        {/* Don't show again */}
+        <div className="mb-6 flex items-center justify-center">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-text-muted hover:text-text-secondary transition-colors">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-accent-projeto"
+            />
+            Nao mostrar novamente
+          </label>
+        </div>
+
         {/* Navigation */}
         <div className="flex items-center justify-between">
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
             className="rounded-lg px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors"
           >
             Pular tour
@@ -119,20 +148,20 @@ export function WelcomeModal() {
                 Anterior
               </button>
             )}
-            
+
             {currentStep < TUTORIAL_STEPS.length - 1 ? (
               <button
                 onClick={() => setCurrentStep(currentStep + 1)}
                 className="rounded-lg bg-accent-projeto px-6 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
               >
-                Próximo
+                Proximo
               </button>
             ) : (
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="rounded-lg bg-accent-projeto px-6 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
               >
-                Começar a usar!
+                Comecar a usar!
               </button>
             )}
           </div>
@@ -140,7 +169,7 @@ export function WelcomeModal() {
 
         {/* Close button */}
         <button
-          onClick={() => setIsOpen(false)}
+          onClick={handleClose}
           className="absolute right-4 top-4 rounded-lg p-2 text-text-muted hover:bg-surface-2 hover:text-text-primary transition-colors"
         >
           <X className="h-5 w-5" />
