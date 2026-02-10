@@ -164,18 +164,6 @@ export function WorkspaceSwitcher() {
               ))}
             </div>
 
-            <div className="border-t border-border p-2">
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  setShowCreate(true);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-2 transition-colors text-sm text-text-secondary"
-              >
-                <Plus className="h-4 w-4" />
-                Criar novo workspace
-              </button>
-            </div>
           </div>
         )}
       </div>

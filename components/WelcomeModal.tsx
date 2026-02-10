@@ -49,7 +49,6 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 export function WelcomeModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [dontShowAgain, setDontShowAgain] = useState(false);
   const { items } = useMementotask();
 
   useEffect(() => {
@@ -64,9 +63,6 @@ export function WelcomeModal() {
 
   function handleClose() {
     setIsOpen(false);
-    if (dontShowAgain) {
-      localStorage.setItem(DISMISS_KEY, 'true');
-    }
   }
 
   if (!isOpen) return null;
@@ -117,26 +113,16 @@ export function WelcomeModal() {
           </p>
         </div>
 
-        {/* Don't show again */}
-        <div className="mb-6 flex items-center justify-center">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-text-muted hover:text-text-secondary transition-colors">
-            <input
-              type="checkbox"
-              checked={dontShowAgain}
-              onChange={(e) => setDontShowAgain(e.target.checked)}
-              className="h-4 w-4 rounded border-border accent-accent-projeto"
-            />
-            Nao mostrar novamente
-          </label>
-        </div>
-
         {/* Navigation */}
         <div className="flex items-center justify-between">
           <button
-            onClick={handleClose}
+            onClick={() => {
+              localStorage.setItem(DISMISS_KEY, 'true');
+              setIsOpen(false);
+            }}
             className="rounded-lg px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors"
           >
-            Pular tour
+            Nao mostrar novamente
           </button>
 
           <div className="flex gap-3">

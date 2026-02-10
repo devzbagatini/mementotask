@@ -31,9 +31,11 @@ export function AuthPage() {
           setSubmitting(false);
           return;
         }
-        const { error } = await signUp(email, password, name);
+        const { error, data } = await signUp(email, password, name);
         if (error) {
           setError(error.message);
+        } else if (data?.user?.identities?.length === 0) {
+          setError('Este email ja possui uma conta. Tente fazer login.');
         } else {
           setError('Verifique seu email para confirmar a conta.');
         }
