@@ -55,28 +55,23 @@ const MementotaskContext = createContext<MementotaskContextValue | null>(null);
 export function MementotaskProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const { user } = useAuth();
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, loading: workspaceLoading } = useWorkspace();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load items - Supabase with workspace support if logged in, localStorage otherwise
+  // Load items - wait for workspace to finish loading first
   useEffect(() => {
+    // Don't load until workspace context is ready (prevents flash)
+    if (user && workspaceLoading) return;
+
     async function loadData() {
       setIsLoading(true);
       try {
         let items: Item[];
-        
+
         if (user) {
           // Load from Supabase with workspace filter
           const workspaceId = currentWorkspace?.id || null;
           items = await loadItemsByWorkspace(workspaceId, user.id);
-          
-          if (items.length === 0 && !currentWorkspace) {
-            // Seed with mock data for new users (only in personal space)
-            for (const mockItem of MOCK_DATA) {
-              await createItemInWorkspace(user.id, null, mockItem);
-            }
-            items = await loadItemsByWorkspace(null, user.id);
-          }
         } else {
           // Load from localStorage
           items = loadLocalItems();
@@ -85,20 +80,21 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
             saveLocalItems(items);
           }
         }
-        
+
         dispatch({ type: 'SET_ITEMS', payload: items });
       } catch (error) {
         console.error('Error loading items:', error);
-        // Fallback to localStorage on error
-        const items = loadLocalItems();
-        dispatch({ type: 'SET_ITEMS', payload: items.length > 0 ? items : MOCK_DATA });
+        if (!user) {
+          const items = loadLocalItems();
+          dispatch({ type: 'SET_ITEMS', payload: items.length > 0 ? items : MOCK_DATA });
+        }
       } finally {
         setIsLoading(false);
       }
     }
-    
+
     loadData();
-  }, [user, currentWorkspace?.id]);
+  }, [user, currentWorkspace?.id, workspaceLoading]);
 
   const reloadItems = useCallback(async () => {
     if (!user) return;
