@@ -23,9 +23,13 @@ import type { Item, Tipo } from '@/lib/types';
 import {
   type ColumnKey,
   DEFAULT_VISIBLE_COLUMNS,
+  COLUMN_DEFS,
   loadColumnConfig,
   saveColumnConfig,
   getVisibleColumnDefs,
+  loadColumnWidths,
+  saveColumnWidths,
+  getColumnWidth,
 } from '@/lib/columns';
 import { TabelaRow, type DropZone } from './TabelaRow';
 import { ColumnSettings } from './ColumnSettings';
@@ -192,6 +196,39 @@ function compareItems(a: Item, b: Item, key: ColumnKey, allItems: Item[]): numbe
   }
 }
 
+function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
+  const startXRef = useRef(0);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startXRef.current = e.clientX;
+
+    const handlePointerMove = (ev: PointerEvent) => {
+      const delta = ev.clientX - startXRef.current;
+      if (Math.abs(delta) > 2) {
+        onResize(delta);
+        startXRef.current = ev.clientX;
+      }
+    };
+
+    const handlePointerUp = () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+    };
+
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+  }, [onResize]);
+
+  return (
+    <div
+      onPointerDown={handlePointerDown}
+      className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-accent-projeto/30 transition-colors"
+    />
+  );
+}
+
 interface TabelaViewProps {
   clienteFilter?: string;
 }
@@ -209,6 +246,23 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
   const handleColumnsChange = useCallback((cols: ColumnKey[]) => {
     setVisibleColumnKeys(cols);
     saveColumnConfig(cols);
+  }, []);
+
+  // Column widths (resizable)
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setColumnWidths(loadColumnWidths());
+  }, []);
+
+  const handleColumnResize = useCallback((key: ColumnKey, width: number) => {
+    const minW = COLUMN_DEFS[key].minWidth ?? 50;
+    const clamped = Math.max(minW, width);
+    setColumnWidths(prev => {
+      const next = { ...prev, [key]: clamped };
+      saveColumnWidths(next);
+      return next;
+    });
   }, []);
 
   const forcedHiddenKeys: ColumnKey[] = clienteFilter ? ['cliente'] : [];
@@ -380,21 +434,33 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
         onDragCancel={() => { setActiveItem(null); setDropTarget(null); }}
       >
         <div className="overflow-x-auto rounded-xl border border-border font-data">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              {columns.map(({ key }) => (
+                <col key={key} style={{ width: getColumnWidth(key, columnWidths) }} />
+              ))}
+              <col style={{ width: 70 }} />
+            </colgroup>
             <thead>
               <tr className="bg-surface-2">
                 {columns.map(({ key, label, className }) => (
                   <th
                     key={key}
                     className={cn(
-                      'px-4 py-3 text-left font-medium text-text-secondary select-none',
+                      'px-4 py-3 text-left font-medium text-text-secondary select-none relative',
                       className,
                     )}
                   >
                     {label}
+                    <ResizeHandle
+                      onResize={(delta) => {
+                        const current = getColumnWidth(key, columnWidths);
+                        handleColumnResize(key, current + delta);
+                      }}
+                    />
                   </th>
                 ))}
-                <th className="px-4 py-3 text-left font-medium text-text-secondary w-20">
+                <th className="px-4 py-3 text-left font-medium text-text-secondary w-[70px]">
                   {ACOES_COLUMN.label}
                 </th>
               </tr>

@@ -77,14 +77,14 @@ export function TabelaRow({
   };
 
   function renderCell(col: ColumnDef): ReactNode {
-    const tdClass = cn('px-4 py-3', col.className);
+    const tdClass = cn('px-4 py-3 overflow-hidden', col.className);
 
     switch (col.key) {
       case 'cliente':
         return (
           <td key="cliente" className={tdClass}>
             {clienteNome ? (
-              <span className="text-xs text-text-secondary">{clienteNome}</span>
+              <span className="text-xs text-text-secondary truncate block">{clienteNome}</span>
             ) : (
               <span className="text-xs text-text-muted">—</span>
             )}
@@ -202,7 +202,7 @@ export function TabelaRow({
         return (
           <td key="tipoProjeto" className={tdClass}>
             {item.tipoProjeto ? (
-              <span className="text-xs text-text-secondary">{item.tipoProjeto}</span>
+              <span className="text-xs text-text-secondary truncate block">{item.tipoProjeto}</span>
             ) : (
               <span className="text-xs text-text-muted">—</span>
             )}
@@ -235,7 +235,7 @@ export function TabelaRow({
         return (
           <td key="responsavel" className={tdClass}>
             {item.responsavel ? (
-              <span className="text-xs text-text-secondary">{item.responsavel}</span>
+              <span className="text-xs text-text-secondary truncate block">{item.responsavel}</span>
             ) : (
               <span className="text-xs text-text-muted">—</span>
             )}
@@ -273,7 +273,7 @@ export function TabelaRow({
       onClick={() => openEditModal(item)}
     >
       {/* Nome (always first — grip, chevron, +, checkbox, name) */}
-      <td className="px-4 py-3 relative">
+      <td className="px-4 py-3 relative overflow-hidden">
         {dropIndicator === 'above' && (
           <div className="absolute top-0 left-4 right-4 h-[2px] bg-accent-projeto rounded-full z-20 pointer-events-none" />
         )}
@@ -281,7 +281,7 @@ export function TabelaRow({
           <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-accent-projeto rounded-full z-20 pointer-events-none" />
         )}
 
-        <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 20}px` }}>
+        <div className="flex items-center gap-1.5 min-w-0" style={{ paddingLeft: `${depth * 20}px` }}>
           <div
             ref={setActivatorNodeRef}
             {...attributes}
@@ -336,7 +336,7 @@ export function TabelaRow({
           )}
 
           <span className={cn(
-            'font-medium',
+            'font-medium truncate',
             item.status === 'concluido' ? 'text-text-muted line-through' : 'text-text-primary',
           )}>
             {item.nome}
