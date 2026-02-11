@@ -12,11 +12,14 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(isoString: string): string {
+  // Append T00:00:00 to date-only strings to force local timezone parsing
+  // Without this, "2026-02-11" is parsed as UTC midnight which in UTC-3 becomes Feb 10
+  const date = isoString.includes('T') ? new Date(isoString) : new Date(isoString + 'T00:00:00');
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-  }).format(new Date(isoString));
+  }).format(date);
 }
 
 export function calculateProgress(
@@ -47,7 +50,8 @@ export function getUniqueClientes(items: Item[]): string[] {
 
 export function isOverdue(prazo: string | undefined): boolean {
   if (!prazo) return false;
-  return new Date(prazo) < new Date();
+  const prazoDate = prazo.includes('T') ? new Date(prazo) : new Date(prazo + 'T23:59:59');
+  return prazoDate < new Date();
 }
 
 export function cn(...classes: (string | boolean | undefined | null)[]): string {

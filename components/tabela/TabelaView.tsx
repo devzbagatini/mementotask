@@ -255,10 +255,11 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
     setColumnWidths(loadColumnWidths());
   }, []);
 
-  const handleColumnResize = useCallback((key: ColumnKey, width: number) => {
-    const minW = COLUMN_DEFS[key].minWidth ?? 50;
-    const clamped = Math.max(minW, width);
+  const handleColumnResize = useCallback((key: ColumnKey, delta: number) => {
     setColumnWidths(prev => {
+      const current = prev[key] ?? COLUMN_DEFS[key].defaultWidth ?? 100;
+      const minW = COLUMN_DEFS[key].minWidth ?? 50;
+      const clamped = Math.max(minW, current + delta);
       const next = { ...prev, [key]: clamped };
       saveColumnWidths(next);
       return next;
@@ -453,10 +454,7 @@ export function TabelaView({ clienteFilter }: TabelaViewProps = {}) {
                   >
                     {label}
                     <ResizeHandle
-                      onResize={(delta) => {
-                        const current = getColumnWidth(key, columnWidths);
-                        handleColumnResize(key, current + delta);
-                      }}
+                      onResize={(delta) => handleColumnResize(key, delta)}
                     />
                   </th>
                 ))}
