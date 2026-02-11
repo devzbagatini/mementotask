@@ -73,6 +73,40 @@ export async function createWorkspace(userId: string, nome: string, descricao?: 
   };
 }
 
+export async function createDefaultWorkspaceIfNeeded(userId: string): Promise<Workspace | null> {
+  if (!supabase) throw new Error('Supabase not configured');
+
+  const { data, error } = await supabase
+    .rpc('create_default_workspace_if_needed', { user_id: userId });
+
+  if (error) {
+    console.error('Error creating default workspace:', error);
+    return null;
+  }
+
+  if (!data) return null;
+
+  const { data: workspace, error: wsError } = await supabase
+    .from('workspaces')
+    .select('*')
+    .eq('id', data)
+    .single();
+
+  if (wsError) {
+    console.error('Error fetching workspace:', wsError);
+    return null;
+  }
+
+  return {
+    id: workspace.id,
+    nome: workspace.nome,
+    descricao: workspace.descricao,
+    ownerId: workspace.owner_id,
+    criadoEm: workspace.criado_em,
+    atualizadoEm: workspace.atualizado_em,
+  };
+}
+
 export async function updateWorkspace(id: string, changes: Partial<Workspace>): Promise<Workspace> {
   if (!supabase) throw new Error('Supabase not configured');
 

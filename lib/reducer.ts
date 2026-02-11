@@ -6,6 +6,7 @@ export interface ModalState {
   item?: Item;
   tipo?: Tipo;
   parentId?: string | null;
+  defaultStatus?: string;
 }
 
 export interface ConfirmState {

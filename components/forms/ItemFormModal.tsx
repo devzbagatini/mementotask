@@ -13,7 +13,7 @@ export function ItemFormModal() {
 
   if (!modalState.isOpen) return null;
 
-  const { mode, item, tipo, parentId } = modalState;
+  const { mode, item, tipo, parentId, defaultStatus } = modalState;
   const resolvedTipo = item?.tipo ?? tipo ?? 'projeto';
 
   const title = mode === 'edit'
@@ -36,6 +36,7 @@ export function ItemFormModal() {
       <ItemForm
         tipo={resolvedTipo}
         parentId={parentId}
+        defaultStatus={defaultStatus}
         item={mode === 'edit' ? item : undefined}
         onSubmit={handleSubmit}
         onCancel={closeModal}

@@ -13,7 +13,7 @@ import {
 import type { Item, ItemCreate, FilterState, ViewType, Tipo } from './types';
 import { appReducer, initialState, type ModalState, type ConfirmState } from './reducer';
 import { loadItems as loadLocalItems, saveItems as saveLocalItems, createItem as createLocalItem, updateItem as updateLocalItem, deleteItem as deleteLocalItem } from './storage';
-import { loadItems as loadSupabaseItems, createItem as createSupabaseItem, updateItem as updateSupabaseItem, deleteItem as deleteSupabaseItem } from './supabase-storage';
+import { updateItem as updateSupabaseItem, deleteItem as deleteSupabaseItem } from './supabase-storage';
 import { loadItemsByWorkspace, createItemInWorkspace } from './workspace-storage';
 import { useWorkspace } from './workspace-context';
 import { calculateProgress, getUniqueClientes } from './utils';
@@ -213,7 +213,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
   const openCreateModal = useCallback((tipo: Tipo, parentId?: string | null, status?: string) => {
     dispatch({
       type: 'OPEN_MODAL',
-      payload: { mode: 'create', tipo, parentId: parentId ?? null },
+      payload: { mode: 'create', tipo, parentId: parentId ?? null, defaultStatus: status },
     });
   }, []);
 
@@ -255,7 +255,8 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
         if (user) {
           // Update in Supabase
           await updateSupabaseItem(itemId, { parentId: newParentId, tipo: newTipo, ordem: targetIndex + 1 });
-          const items = await loadSupabaseItems(user.id);
+          const workspaceId = currentWorkspace?.id || null;
+          const items = await loadItemsByWorkspace(workspaceId, user.id);
           dispatch({ type: 'SET_ITEMS', payload: items });
         } else {
           // Update in localStorage
@@ -268,7 +269,7 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       }
     },
-    [state.items, user],
+    [state.items, user, currentWorkspace?.id],
   );
 
   // Confirm dialog actions

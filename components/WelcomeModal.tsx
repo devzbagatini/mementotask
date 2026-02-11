@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { X, Kanban, Table, CheckSquare, Plus, MousePointer, Move } from 'lucide-react';
 import { useMementotask } from '@/lib/context';
+import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
 
-const DISMISS_KEY = 'mementotask_tutorial_dismissed';
+const DISMISS_KEY_PREFIX = 'mementotask_tutorial_dismissed';
 
 interface TutorialStep {
   icon: typeof Kanban;
@@ -50,19 +51,24 @@ export function WelcomeModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const { items } = useMementotask();
+  const { user } = useAuth();
+
+  const dismissKey = user?.id
+    ? `${DISMISS_KEY_PREFIX}_${user.id}`
+    : DISMISS_KEY_PREFIX;
 
   useEffect(() => {
-    const dismissed = localStorage.getItem(DISMISS_KEY);
+    const dismissed = localStorage.getItem(dismissKey);
     if (dismissed === 'true') return;
 
     // Mostra para novos usuarios (poucos items ou nenhum)
     if (items.length <= 10) {
       setIsOpen(true);
     }
-  }, [items.length]);
+  }, [items.length, dismissKey]);
 
   function handleClose() {
-    localStorage.setItem(DISMISS_KEY, 'true');
+    localStorage.setItem(dismissKey, 'true');
     setIsOpen(false);
   }
 
@@ -118,7 +124,7 @@ export function WelcomeModal() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => {
-              localStorage.setItem(DISMISS_KEY, 'true');
+              localStorage.setItem(dismissKey, 'true');
               setIsOpen(false);
             }}
             className="rounded-lg px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors"

@@ -11,12 +11,13 @@ import { Briefcase, ListTodo, User } from 'lucide-react';
 interface ItemFormProps {
   tipo: Tipo;
   parentId?: string | null;
+  defaultStatus?: string;
   item?: Item; // existing item for edit mode
   onSubmit: (data: ItemCreate | { id: string; changes: Partial<Item> }) => void;
   onCancel: () => void;
 }
 
-export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormProps) {
+export function ItemForm({ tipo, parentId, defaultStatus, item, onSubmit, onCancel }: ItemFormProps) {
   const isEdit = !!item;
   const { items, uniqueResponsaveis } = useMementotask();
   const { user } = useAuth();
@@ -25,7 +26,7 @@ export function ItemForm({ tipo, parentId, item, onSubmit, onCancel }: ItemFormP
 
   // Form state
   const [nome, setNome] = useState(item?.nome ?? '');
-  const [status, setStatus] = useState<Status>(item?.status ?? 'a_fazer');
+  const [status, setStatus] = useState<Status>(item?.status ?? (defaultStatus as Status) ?? 'a_fazer');
   const [prioridade, setPrioridade] = useState<Prioridade>(item?.prioridade ?? 'media');
   const [prazo, setPrazo] = useState(item?.prazo ? item.prazo.slice(0, 10) : '');
   const [horas, setHoras] = useState(item?.horas?.toString() ?? '');

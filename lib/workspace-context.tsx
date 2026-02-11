@@ -14,6 +14,8 @@ import type { Workspace, WorkspaceWithRole, WorkspaceMember, WorkspaceInvite } f
 import {
   loadWorkspaces,
   createWorkspace,
+  createDefaultWorkspaceIfNeeded,
+  createItemInWorkspace,
   updateWorkspace,
   deleteWorkspace,
   inviteMember,
@@ -26,6 +28,7 @@ import {
   acceptInvite,
 } from './workspace-storage';
 import { supabase } from './supabase';
+import { EXAMPLE_PROJECT } from './mock-data';
 
 interface WorkspaceInviteItem {
   id: string;
@@ -103,30 +106,75 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
+      // Primeiro: criar workspace padrão se necessário (de forma idempotente)
+      const workspace = await createDefaultWorkspaceIfNeeded(user.id);
+      
+      // Segundo: carregar workspaces
       let data = await loadWorkspaces(user.id);
 
-      // Auto-create default workspace on first login OR if user has no owned workspaces
-      const hasOwnedWorkspace = data.some(w => w.role === 'owner');
-      if (!hasOwnedWorkspace) {
-        await createWorkspace(user.id, 'Meu Workspace');
+      // Terceiro: seed example project APENAS se criou workspace agora
+      if (workspace) {
+        const hasProjects = data.some(w => w.id === workspace.id);
+        if (hasProjects) {
+          const { data: items } = await supabase!
+            .from('items')
+            .select('id')
+            .eq('workspace_id', workspace.id)
+            .limit(1);
+
+          if (!items || items.length === 0) {
+            // Mapear IDs antigos (hardcoded) para novos UUIDs do Supabase
+            const idMap = new Map<string, string>();
+
+            // Inserir em ordem: projetos primeiro, depois tarefas, depois subtarefas
+            const sorted = [...EXAMPLE_PROJECT].sort((a, b) => {
+              const order = { projeto: 0, tarefa: 1, subtarefa: 2 };
+              return (order[a.tipo] ?? 3) - (order[b.tipo] ?? 3);
+            });
+
+            for (const item of sorted) {
+              const mappedParentId = item.parentId ? idMap.get(item.parentId) ?? null : null;
+              const created = await createItemInWorkspace(user.id, workspace.id, {
+                ...item,
+                parentId: mappedParentId,
+              });
+              idMap.set(item.id, created.id);
+            }
+          }
+        }
         data = await loadWorkspaces(user.id);
       }
 
       setWorkspaces(data);
 
-      // Restore from localStorage or use first workspace
+      // Restore from localStorage or use a workspace
       const savedId = localStorage.getItem(STORAGE_KEY);
       if (savedId) {
         const saved = data.find(w => w.id === savedId);
         if (saved) {
           setCurrentWorkspaceState(saved);
+        } else {
+          // Prioritize shared workspace (not owner) over personal workspace
+          const sharedWs = data.find(w => w.role !== 'owner');
+          if (sharedWs) {
+            setCurrentWorkspaceState(sharedWs);
+          } else if (data.length > 0) {
+            setCurrentWorkspaceState(data[0]);
+          }
+          if (data.length > 0) {
+            localStorage.setItem(STORAGE_KEY, (sharedWs || data[0]).id);
+          }
+        }
+      } else {
+        // Prioritize shared workspace (not owner) over personal workspace
+        const sharedWs = data.find(w => w.role !== 'owner');
+        if (sharedWs) {
+          setCurrentWorkspaceState(sharedWs);
+          localStorage.setItem(STORAGE_KEY, sharedWs.id);
         } else if (data.length > 0) {
           setCurrentWorkspaceState(data[0]);
           localStorage.setItem(STORAGE_KEY, data[0].id);
         }
-      } else if (data.length > 0) {
-        setCurrentWorkspaceState(data[0]);
-        localStorage.setItem(STORAGE_KEY, data[0].id);
       }
     } catch (error) {
       console.error('Error loading workspaces:', error);
