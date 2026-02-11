@@ -77,7 +77,7 @@ export function TabelaRow({
   };
 
   function renderCell(col: ColumnDef): ReactNode {
-    const tdClass = cn('px-4 py-3 overflow-hidden', col.className);
+    const tdClass = cn('px-4 py-3', col.className);
 
     switch (col.key) {
       case 'cliente':

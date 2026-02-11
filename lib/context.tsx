@@ -118,7 +118,8 @@ export function MementotaskProvider({ children }: { children: ReactNode }) {
         if (user) {
           // Create in Supabase with workspace
           const workspaceId = currentWorkspace?.id || null;
-          await createItemInWorkspace(user.id, workspaceId, data);
+          const siblingCount = state.items.filter(i => i.parentId === (data.parentId ?? null)).length;
+          await createItemInWorkspace(user.id, workspaceId, { ...data, ordem: siblingCount + 1 });
           const items = await loadItemsByWorkspace(workspaceId, user.id);
           dispatch({ type: 'SET_ITEMS', payload: items });
         } else {
