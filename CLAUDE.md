@@ -110,11 +110,22 @@ TabelaView.tsx (DndContext + SortableContext) → TabelaRow.tsx (useSortable)
 - `is_workspace_member(ws_id, uid)` — Evita recursão RLS
 - `is_workspace_owner(ws_id, uid)` — Evita recursão RLS
 - `get_member_role(ws_id, uid)` — Retorna role do membro
+- `get_user_email()` — Retorna email do user autenticado
+- `user_workspace_ids(uid)` — Retorna IDs dos workspaces do user
+- `user_workspace_role(ws_id, uid)` — Retorna role no workspace
+- `handle_new_user()` — Trigger de auth para novos usuários
+
+### Segurança
+- RLS habilitado em todas as 4 tabelas (workspaces, workspace_members, workspace_invites, items)
+- Role `anon` **sem acesso** às tabelas (REVOKE ALL aplicado)
+- Apenas `authenticated` acessa, filtrado por RLS policies
+- Auth via Supabase Auth (HTTPS direto, senha nunca passa pelo Next.js server)
+- Middleware exige Bearer token em `/api/*`
 
 ### SQL Files
 - `supabase-complete-setup.sql` — Schema completo (DROP + CREATE)
 - `supabase-security-fix.sql` — Fix RLS (safe to re-run)
-- `supabase-rpc-default-workspace.sql` — RPC de workspace padrão
+- `supabase-security-audit.sql` — Auditoria de segurança (query única, re-executável)
 
 ## Padrões
 
@@ -123,3 +134,4 @@ TabelaView.tsx (DndContext + SortableContext) → TabelaRow.tsx (useSortable)
 - **Reload após mutação**: Após qualquer CRUD, sempre recarregar via `loadItemsByWorkspace()` (não `loadSupabaseItems`)
 - **localStorage**: Chaves devem ser scoped por userId quando relevante (ex: `mementotask_tutorial_dismissed_${userId}`)
 - **Env vars**: Sempre `.trim()` — Vercel pode adicionar newlines
+- **Role anon**: Nunca dar grants para `anon` em tabelas de dados. Revogar se o Supabase adicionar por padrão
